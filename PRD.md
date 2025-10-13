@@ -639,6 +639,43 @@ description: description || undefined,
 
 ---
 
+### Optional 필드 undefined 처리 이슈 (2025-01-14 해결)
+**문제**: `lib/stats.ts`에서 `task.durationMin`이 undefined 가능성으로 TypeScript 컴파일 에러
+
+**에러 위치**: `lib/stats.ts:20`, `lib/stats.ts:54`
+```typescript
+// 에러 발생 코드
+statGain.str = (statGain.str || 0) + Math.floor(task.durationMin / 10);
+let exp = task.durationMin; // 'task.durationMin' is possibly 'undefined'
+```
+
+**원인**:
+- Task 타입의 `duration_min`과 `durationMin` 모두 optional
+- TypeScript는 optional 필드에 직접 산술 연산 시 에러 발생
+- DB는 `duration_min` (snake_case), alias는 `durationMin` (camelCase)
+
+**해결**:
+```typescript
+// Before (에러)
+const exp = task.durationMin;
+statGain.str = Math.floor(task.durationMin / 10);
+
+// After (수정)
+const duration = task.duration_min || task.durationMin || 0;
+const exp = duration;
+statGain.str = Math.floor(duration / 10);
+```
+
+**영향받은 파일**:
+- `lib/stats.ts` - calculateStatGain, calculateExpGain 함수
+
+**교훈**:
+- Optional 필드 사용 전 **반드시 fallback 값** 설정
+- snake_case 우선, camelCase alias는 대체용
+- 산술 연산 전 `|| 0` 패턴 적용
+
+---
+
 ## ✅ 구현 완료 기능 (2025-01-14)
 
 ### 1. OpenAI GPT 통합 완료
