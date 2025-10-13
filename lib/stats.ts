@@ -14,32 +14,33 @@ export function calculateStatGain(task: Task): Partial<Stats> {
 
   // 태그 기반 스탯 증가
   const tags = task.tags || [];
+  const duration = task.duration_min || task.durationMin || 0;
 
   // STR (체력): 운동, 수면
   if (tags.some(t => ['exercise', 'workout', 'fitness', 'sleep', 'health'].includes(t))) {
-    statGain.str = (statGain.str || 0) + Math.floor(task.durationMin / 10);
+    statGain.str = (statGain.str || 0) + Math.floor(duration / 10);
   }
 
   // INT (지성): 학습, 코딩, 독서
   if (tags.some(t => ['learning', 'study', 'coding', 'development', 'reading', 'research'].includes(t))) {
-    statGain.int = (statGain.int || 0) + Math.floor(task.durationMin / 10);
+    statGain.int = (statGain.int || 0) + Math.floor(duration / 10);
   }
 
   // WIS (지혜): 성찰, 명상, 회고
   if (tags.some(t => ['reflection', 'meditation', 'review', 'planning', 'wisdom'].includes(t))) {
-    statGain.wis = (statGain.wis || 0) + Math.floor(task.durationMin / 10);
+    statGain.wis = (statGain.wis || 0) + Math.floor(duration / 10);
   }
 
   // CHA (매력): 네트워킹, 소통, 발표
   if (tags.some(t => ['networking', 'meeting', 'presentation', 'communication', 'social'].includes(t))) {
-    statGain.cha = (statGain.cha || 0) + Math.floor(task.durationMin / 10);
+    statGain.cha = (statGain.cha || 0) + Math.floor(duration / 10);
   }
 
   // GRT (꾸준함): 모든 태스크 완료 시 기본 증가
   statGain.grt = (statGain.grt || 0) + 2;
 
   // Deep Work (90분 이상): INT, GRT 추가 증가
-  if (task.durationMin >= 90) {
+  if (duration >= 90) {
     statGain.int = (statGain.int || 0) + 5;
     statGain.grt = (statGain.grt || 0) + 3;
   }
@@ -51,14 +52,15 @@ export function calculateStatGain(task: Task): Partial<Stats> {
  * 경험치 계산
  */
 export function calculateExpGain(task: Task): number {
-  let exp = task.durationMin; // 기본: 1분당 1 EXP
+  const duration = task.duration_min || task.durationMin || 0;
+  let exp = duration; // 기본: 1분당 1 EXP
 
   // 우선순위별 보너스
   if (task.priority === 1) exp *= 1.5;
   if (task.priority === 2) exp *= 1.2;
 
   // Deep Work 보너스
-  if (task.durationMin >= 90) exp += 100;
+  if (duration >= 90) exp += 100;
 
   return Math.floor(exp);
 }
