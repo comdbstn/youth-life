@@ -28,3 +28,8 @@ export function isAuthenticated(): boolean {
 export function getUserId(): string {
   return USER_ID;
 }
+
+export function getCurrentUserId(): string {
+  if (typeof window === 'undefined') return USER_ID;
+  return localStorage.getItem('youth_life_user_id') || USER_ID;
+}
