@@ -49,7 +49,7 @@ export default function GoalsPage() {
       const newGoal: Partial<Goal> = {
         user_id: userId,
         title,
-        description,
+        description: description || undefined,
         goal_type: activeTab,
         status: 'in_progress',
         progress: 0,

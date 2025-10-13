@@ -603,3 +603,36 @@ updatedStats.total_exp = currentExp + expGain;
 - Supabase에서 가져온 데이터는 **항상 snake_case 필드**로 접근
 - Optional alias는 편의용일 뿐, DB 응답은 snake_case만 보장됨
 - API Route에서는 snake_case 사용 강제
+
+---
+
+### prompt() 반환값 null 처리 이슈 (2025-01-14 해결)
+**문제**: `prompt()`의 반환 타입이 `string | null`인데, optional 필드에 `null` 직접 할당 시 TypeScript 에러
+
+**에러 위치**: `app/goals/page.tsx`
+```typescript
+const description = prompt('목표 설명 (선택):');  // string | null
+description,  // Type 'string | null' is not assignable to type 'string | undefined'
+```
+
+**원인**:
+- `prompt()` 취소 시 `null` 반환
+- TypeScript 타입은 `undefined`만 허용
+- `null !== undefined`
+
+**해결**:
+```typescript
+// Before (에러)
+description,
+
+// After (수정)
+description: description || undefined,
+```
+
+**영향받은 파일**:
+- `app/goals/page.tsx` - handleAddGoal 함수
+
+**교훈**:
+- `prompt()` 사용 시 항상 `|| undefined` 변환 필요
+- `null`과 `undefined`는 다른 타입
+- Optional 필드는 `undefined`만 허용 (`null` 불가)
