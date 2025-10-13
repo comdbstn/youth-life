@@ -8,9 +8,10 @@ import { calculateStatGain, calculateExpGain, calculateLevel, applyStatGain } fr
  */
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const params = await context.params;
     const body = await request.json();
     const taskId = params.id;
 
@@ -121,9 +122,10 @@ export async function PATCH(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const params = await context.params;
     const { error } = await supabase
       .from('tasks')
       .delete()
