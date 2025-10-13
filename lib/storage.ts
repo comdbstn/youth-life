@@ -43,7 +43,7 @@ export function signUp(email: string, password: string): { user: User | null; er
     email,
     timezone: 'Asia/Seoul',
     locale: 'ko-KR',
-    createdAt: new Date().toISOString(),
+    created_at: new Date().toISOString(),
   };
 
   // 비밀번호는 실제로는 해싱해야 하지만, 데모용으로 간단히 저장
@@ -73,7 +73,7 @@ export function signIn(email: string, password: string): { user: User | null; er
     email,
     timezone: 'Asia/Seoul',
     locale: 'ko-KR',
-    createdAt: new Date().toISOString(),
+    created_at: new Date().toISOString(),
   };
 
   setCurrentUser(user);
@@ -91,14 +91,14 @@ function initializeUserData(userId: string) {
   const today = new Date().toISOString().split('T')[0];
   const initialStats: Stats = {
     id: `stats_${Date.now()}`,
-    userId,
+    user_id: userId,
     date: today,
     str: 0,
     int: 0,
     wis: 0,
     cha: 0,
     grt: 0,
-    totalExp: 0,
+    total_exp: 0,
     level: 1,
   };
   saveStats(initialStats);
@@ -110,10 +110,11 @@ export function getTasks(userId: string, date?: string): Task[] {
   const tasksStr = localStorage.getItem(STORAGE_KEYS.TASKS);
   const allTasks: Task[] = tasksStr ? JSON.parse(tasksStr) : [];
 
-  let filtered = allTasks.filter(t => t.userId === userId);
+  let filtered = allTasks.filter(t => (t.user_id || t.userId) === userId);
 
   if (date) {
-    filtered = filtered.filter(t => t.plannedAt.startsWith(date));
+    const plannedAt = (t: Task) => t.planned_at || t.plannedAt || '';
+    filtered = filtered.filter(t => plannedAt(t).startsWith(date));
   }
 
   return filtered.sort((a, b) => a.priority - b.priority);
@@ -149,10 +150,10 @@ export function getGoals(userId: string, level?: 'MONTHLY' | 'WEEKLY' | 'DAILY')
   const goalsStr = localStorage.getItem(STORAGE_KEYS.GOALS);
   const allGoals: Goal[] = goalsStr ? JSON.parse(goalsStr) : [];
 
-  let filtered = allGoals.filter(g => g.userId === userId);
+  let filtered = allGoals.filter(g => (g.user_id || g.userId) === userId);
 
   if (level) {
-    filtered = filtered.filter(g => g.level === level);
+    filtered = filtered.filter(g => (g.goal_type as any) === level);
   }
 
   return filtered;
@@ -179,7 +180,7 @@ export function getStats(userId: string, date: string): Stats | null {
   const statsStr = localStorage.getItem(STORAGE_KEYS.STATS);
   const allStats: Stats[] = statsStr ? JSON.parse(statsStr) : [];
 
-  return allStats.find(s => s.userId === userId && s.date === date) || null;
+  return allStats.find(s => (s.user_id || s.userId) === userId && s.date === date) || null;
 }
 
 export function saveStats(stats: Stats) {
@@ -187,7 +188,8 @@ export function saveStats(stats: Stats) {
   const statsStr = localStorage.getItem(STORAGE_KEYS.STATS);
   const allStats: Stats[] = statsStr ? JSON.parse(statsStr) : [];
 
-  const index = allStats.findIndex(s => s.userId === stats.userId && s.date === stats.date);
+  const userId = stats.user_id || stats.userId;
+  const index = allStats.findIndex(s => (s.user_id || s.userId) === userId && s.date === stats.date);
   if (index >= 0) {
     allStats[index] = stats;
   } else {
@@ -203,16 +205,19 @@ export function getFinanceEntries(userId: string, startDate?: string, endDate?: 
   const financeStr = localStorage.getItem(STORAGE_KEYS.FINANCE);
   const allEntries: FinanceEntry[] = financeStr ? JSON.parse(financeStr) : [];
 
-  let filtered = allEntries.filter(e => e.userId === userId);
+  let filtered = allEntries.filter(e => (e.user_id || e.userId) === userId);
 
   if (startDate) {
-    filtered = filtered.filter(e => e.date >= startDate);
+    const entryDate = (e: FinanceEntry) => e.entry_date || e.entryDate || e.date || '';
+    filtered = filtered.filter(e => entryDate(e) >= startDate);
   }
   if (endDate) {
-    filtered = filtered.filter(e => e.date <= endDate);
+    const entryDate = (e: FinanceEntry) => e.entry_date || e.entryDate || e.date || '';
+    filtered = filtered.filter(e => entryDate(e) <= endDate);
   }
 
-  return filtered.sort((a, b) => b.date.localeCompare(a.date));
+  const getDate = (e: FinanceEntry) => e.entry_date || e.entryDate || e.date || '';
+  return filtered.sort((a, b) => getDate(b).localeCompare(getDate(a)));
 }
 
 export function saveFinanceEntry(entry: FinanceEntry) {
@@ -236,7 +241,7 @@ export function getDayPlan(userId: string, date: string): DayPlan | null {
   const plansStr = localStorage.getItem(STORAGE_KEYS.DAY_PLANS);
   const allPlans: DayPlan[] = plansStr ? JSON.parse(plansStr) : [];
 
-  return allPlans.find(p => p.userId === userId && p.date === date) || null;
+  return allPlans.find(p => (p.user_id || p.userId) === userId && p.date === date) || null;
 }
 
 export function saveDayPlan(plan: DayPlan) {
@@ -244,7 +249,8 @@ export function saveDayPlan(plan: DayPlan) {
   const plansStr = localStorage.getItem(STORAGE_KEYS.DAY_PLANS);
   const allPlans: DayPlan[] = plansStr ? JSON.parse(plansStr) : [];
 
-  const index = allPlans.findIndex(p => p.userId === plan.userId && p.date === plan.date);
+  const userId = plan.user_id || plan.userId;
+  const index = allPlans.findIndex(p => (p.user_id || p.userId) === userId && p.date === plan.date);
   if (index >= 0) {
     allPlans[index] = plan;
   } else {
@@ -260,7 +266,7 @@ export function getReflection(userId: string, date: string): Reflection | null {
   const reflectionsStr = localStorage.getItem(STORAGE_KEYS.REFLECTIONS);
   const allReflections: Reflection[] = reflectionsStr ? JSON.parse(reflectionsStr) : [];
 
-  return allReflections.find(r => r.userId === userId && r.date === date) || null;
+  return allReflections.find(r => (r.user_id || r.userId) === userId && r.date === date) || null;
 }
 
 export function saveReflection(reflection: Reflection) {
@@ -268,7 +274,8 @@ export function saveReflection(reflection: Reflection) {
   const reflectionsStr = localStorage.getItem(STORAGE_KEYS.REFLECTIONS);
   const allReflections: Reflection[] = reflectionsStr ? JSON.parse(reflectionsStr) : [];
 
-  const index = allReflections.findIndex(r => r.userId === reflection.userId && r.date === reflection.date);
+  const userId = reflection.user_id || reflection.userId;
+  const index = allReflections.findIndex(r => (r.user_id || r.userId) === userId && r.date === reflection.date);
   if (index >= 0) {
     allReflections[index] = reflection;
   } else {
