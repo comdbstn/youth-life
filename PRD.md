@@ -575,3 +575,31 @@ GET    /api/report/monthly     // 월간 리포트
 - `app/**/*.tsx` - snake_case 사용
 
 **교훈**: Supabase 사용 시 처음부터 snake_case로 타입 정의하기
+
+---
+
+### API Route에서 optional 필드 undefined 에러 (2025-01-14 해결)
+**문제**: `app/api/tasks/[id]/route.ts`에서 `updatedStats.totalExp`가 undefined 가능성으로 TypeScript 컴파일 에러
+
+**원인**:
+- DB에서 가져온 데이터는 `total_exp` (snake_case)
+- TypeScript alias는 `totalExp?` (optional)
+- 직접 접근 시 undefined 가능
+
+**해결**:
+```typescript
+// Before (에러)
+updatedStats.totalExp += expGain;
+
+// After (수정)
+const currentExp = updatedStats.total_exp || updatedStats.totalExp || 0;
+updatedStats.total_exp = currentExp + expGain;
+```
+
+**영향받은 파일**:
+- `app/api/tasks/[id]/route.ts` - snake_case로 일관성 있게 사용
+
+**교훈**:
+- Supabase에서 가져온 데이터는 **항상 snake_case 필드**로 접근
+- Optional alias는 편의용일 뿐, DB 응답은 snake_case만 보장됨
+- API Route에서는 snake_case 사용 강제
