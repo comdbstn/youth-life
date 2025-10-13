@@ -16,123 +16,174 @@ export interface ThemeConfig {
   description: string;
 }
 
-// 태스크
+// 태스크 (DB snake_case)
 export interface Task {
   id: string;
-  userId: string;
-  goalId?: string;
+  user_id: string;
+  goal_id?: string;
   title: string;
   description?: string;
   tags: string[];
   theme: ThemeType;
   priority: 1 | 2 | 3;
   status: 'pending' | 'in_progress' | 'completed';
-  plannedAt: string;
+  planned_at: string;
+  due_at?: string;
+  duration_min: number;
+  actual_duration_min?: number;
+  completed_at?: string;
+  created_at?: string;
+  // camelCase aliases for convenience
+  userId?: string;
+  goalId?: string;
+  plannedAt?: string;
   dueAt?: string;
-  durationMin: number;
+  durationMin?: number;
   actualDurationMin?: number;
   completedAt?: string;
 }
 
-// 목표
+// 목표 (DB snake_case)
 export interface Goal {
   id: string;
-  userId: string;
-  level: 'MONTHLY' | 'WEEKLY' | 'DAILY';
+  user_id: string;
+  goal_type: 'monthly' | 'weekly' | 'daily';
   title: string;
   description?: string;
-  periodStart: string;
-  periodEnd: string;
+  start_date?: string;
+  end_date?: string;
   progress: number;
-  status: 'active' | 'completed' | 'archived';
+  status: 'pending' | 'in_progress' | 'completed' | 'archived';
+  created_at?: string;
+  // camelCase aliases
+  userId?: string;
+  startDate?: string;
+  endDate?: string;
 }
 
-// 타임블록
+// 타임블록 (DB snake_case)
 export interface TimeBlock {
   id: string;
-  userId: string;
-  taskId: string;
+  user_id: string;
+  task_id: string;
   date: string;
-  startTime: string;
-  endTime: string;
+  start_time: string;
+  end_time: string;
+  actual_start?: string;
+  actual_end?: string;
+  created_at?: string;
+  // camelCase aliases
+  userId?: string;
+  taskId?: string;
+  startTime?: string;
+  endTime?: string;
   actualStart?: string;
   actualEnd?: string;
 }
 
-// 일일 플랜
+// 일일 플랜 (DB snake_case)
 export interface DayPlan {
   id: string;
-  userId: string;
+  user_id: string;
   date: string;
   theme: ThemeType;
-  top3TaskIds: string[];
+  top3_task_ids: string[];
   recommendations?: any;
+  gpt_morning_coach?: string;
+  gpt_night_coach?: string;
+  created_at?: string;
+  // camelCase aliases
+  userId?: string;
+  top3TaskIds?: string[];
   gptMorningCoach?: string;
   gptNightCoach?: string;
 }
 
-// 성찰
+// 성찰 (DB snake_case)
 export interface Reflection {
   id: string;
-  userId: string;
+  user_id: string;
   date: string;
   mood: string;
   energy: number;
   answers: {
-    q1: string; // 가장 잘한 것
-    q2: string; // 막힌 순간
-    q3: string; // 개선 행동
-    q4: string; // 감정지출
-    q5: string; // 한 줄 요약
+    q1: string;
+    q2: string;
+    q3: string;
+    q4: string;
+    q5: string;
   };
+  gpt_summary?: string;
+  gpt_praise?: string;
+  gpt_improvement?: string;
+  tomorrow_priorities?: string[];
+  created_at?: string;
+  // camelCase aliases
+  userId?: string;
   gptSummary?: string;
   gptPraise?: string;
   gptImprovement?: string;
   tomorrowPriorities?: string[];
 }
 
-// 금전
+// 금전 (DB snake_case)
 export interface FinanceEntry {
   id: string;
-  userId: string;
-  date: string;
-  type: 'income' | 'expense';
+  user_id: string;
+  entry_date: string;
+  entry_type: 'income' | 'expense';
   amount: number;
   category: string;
-  tag: 'fixed' | 'variable' | 'emotional';
-  isEmotional: boolean;
-  note?: string;
+  is_emotional: boolean;
+  description?: string;
+  created_at?: string;
+  // camelCase aliases
+  userId?: string;
+  entryDate?: string;
+  entryType?: string;
+  isEmotional?: boolean;
 }
 
-// 스탯
+// 스탯 (DB snake_case)
 export interface Stats {
   id: string;
-  userId: string;
+  user_id: string;
   date: string;
-  str: number; // 체력
-  int: number; // 지성
-  wis: number; // 지혜
-  cha: number; // 매력
-  grt: number; // 꾸준함
-  totalExp: number;
+  str: number;
+  int: number;
+  wis: number;
+  cha: number;
+  grt: number;
+  total_exp: number;
   level: number;
+  created_at?: string;
+  // camelCase aliases
+  userId?: string;
+  totalExp?: number;
 }
 
-// 연속 기록
+// 연속 기록 (DB snake_case)
 export interface Streak {
   id: string;
-  userId: string;
+  user_id: string;
   metric: string;
   count: number;
-  lastDate: string;
-  bestStreak: number;
+  last_date: string;
+  best_streak: number;
+  created_at?: string;
+  // camelCase aliases
+  userId?: string;
+  lastDate?: string;
+  bestStreak?: number;
 }
 
-// 사용자
+// 사용자 (DB snake_case)
 export interface User {
   id: string;
   email: string;
-  timezone: string;
-  locale: string;
-  createdAt: string;
+  timezone?: string;
+  locale?: string;
+  created_at?: string;
+  // camelCase aliases
+  createdAt?: string;
 }

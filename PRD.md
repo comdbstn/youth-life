@@ -556,3 +556,22 @@ GET    /api/report/monthly     // 월간 리포트
 ---
 
 **이제 코딩을 시작합니다! 🚀**
+
+---
+
+## 🐛 Known Issues & Fixes
+
+### TypeScript + Supabase snake_case 이슈 (2025-01-14 해결)
+**문제**: TypeScript 타입은 camelCase인데 Supabase DB는 snake_case라 타입 충돌 발생
+
+**해결**:
+- 모든 interface를 DB snake_case 기준으로 수정
+- camelCase alias 필드 추가 (optional)로 하위 호환성 유지
+- 예: `user_id` (primary) + `userId?` (alias)
+
+**영향받은 파일**:
+- `types/index.ts` - 모든 인터페이스 수정
+- `components/*.tsx` - snake_case 사용
+- `app/**/*.tsx` - snake_case 사용
+
+**교훈**: Supabase 사용 시 처음부터 snake_case로 타입 정의하기
