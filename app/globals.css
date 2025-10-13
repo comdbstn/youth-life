@@ -3,13 +3,8 @@
 @tailwind utilities;
 
 @layer base {
-  :root {
-    --background: 210 40% 10%;
-    --foreground: 210 40% 98%;
-  }
-
   body {
-    @apply bg-dark-navy text-foreground;
+    @apply bg-dark-navy text-white;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 }
