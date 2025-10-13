@@ -54,7 +54,7 @@ export async function PATCH(
           wis: statGain.wis || 0,
           cha: statGain.cha || 0,
           grt: statGain.grt || 0,
-          total_exp: expGain,
+          totalExp: expGain,
           level: 1,
         };
 
@@ -65,9 +65,9 @@ export async function PATCH(
       } else {
         // 스탯 업데이트
         const updatedStats = applyStatGain(currentStats, statGain);
-        updatedStats.total_exp += expGain;
+        updatedStats.totalExp += expGain;
 
-        const levelInfo = calculateLevel(updatedStats.total_exp);
+        const levelInfo = calculateLevel(updatedStats.totalExp);
         updatedStats.level = levelInfo.level;
 
         await supabase
