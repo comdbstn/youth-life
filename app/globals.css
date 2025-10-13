@@ -1,0 +1,80 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 210 40% 10%;
+    --foreground: 210 40% 98%;
+  }
+
+  body {
+    @apply bg-dark-navy text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .glow-text {
+    text-shadow: 0 0 10px currentColor;
+  }
+
+  .card-game {
+    @apply bg-dark-card border border-dark-border rounded-2xl p-6 shadow-lg transition-all duration-300;
+  }
+
+  .card-game:hover {
+    @apply shadow-neon transform scale-[1.02];
+  }
+
+  .btn-primary {
+    @apply bg-cyber-blue text-dark-navy font-bold py-3 px-6 rounded-lg shadow-neon transition-all duration-300;
+  }
+
+  .btn-primary:hover {
+    @apply shadow-neon-pink transform scale-105;
+  }
+
+  .stat-gauge {
+    @apply relative w-20 h-20 rounded-full border-4 border-dark-border;
+  }
+}
+
+/* 스크롤바 커스텀 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0A0E27;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #2A3F5F;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #00D9FF;
+}
+
+/* 애니메이션 */
+@keyframes particle {
+  0% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-50px) scale(0);
+    opacity: 0;
+  }
+}
+
+.particle {
+  animation: particle 1s ease-out forwards;
+}
