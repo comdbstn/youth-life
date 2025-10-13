@@ -44,6 +44,19 @@
    - ✅ stats
    - ✅ streaks
 
+### 4. 마스터 사용자 초기화 (필수!)
+1. SQL Editor에서 **New query** 클릭
+2. `supabase/init_master_user.sql` 파일 내용 전체 복사
+3. SQL Editor에 붙여넣기
+4. **Run** 버튼 클릭
+5. ✅ 결과에서 마스터 사용자 정보 확인:
+   ```
+   id: 00000000-0000-0000-0000-000000000001
+   email: master@youth-life.app
+   ```
+
+⚠️ **중요**: 이 단계를 건너뛰면 앱에서 "invalid input syntax for type uuid" 에러가 발생합니다!
+
 ---
 
 ## 3단계: API 키 복사 (2분)

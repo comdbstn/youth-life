@@ -1,7 +1,8 @@
 // 간단한 비밀번호 인증 시스템
 const MASTER_PASSWORD = 'bo020623';
 const AUTH_KEY = 'youth_life_authenticated';
-const USER_ID = 'master_user';
+// UUID v4 format for Supabase compatibility
+const USER_ID = '00000000-0000-0000-0000-000000000001';
 
 export function login(password: string): boolean {
   if (password === MASTER_PASSWORD) {
