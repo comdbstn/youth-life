@@ -237,7 +237,8 @@ export default function FinancePage() {
                 <div className="space-y-3">
                   {todayEntries.map((entry) => {
                     const isIncome = entry.entry_type === 'income' || entry.entryType === 'income';
-                    const time = new Date(entry.entry_date || entry.entryDate).toLocaleTimeString('ko-KR', {
+                    const entryDate = entry.entry_date || entry.entryDate || new Date().toISOString();
+                    const time = new Date(entryDate).toLocaleTimeString('ko-KR', {
                       hour: '2-digit',
                       minute: '2-digit',
                     });
