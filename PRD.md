@@ -763,6 +763,70 @@ const getDate = (e: FinanceEntry) => e.entry_date || e.entryDate || '';
 
 ---
 
+### Supabase UUID 타입 불일치 이슈 (2025-01-14 해결)
+**문제**: Supabase에서 "invalid input syntax for type uuid: 'master_user'" 에러 발생하며 모든 데이터 로딩 실패
+
+**에러 로그**:
+```
+Failed to load tasks: 400
+Failed to load stats: 400
+Failed to load goals: 400
+fqrfhochysbdyjxtoned.supabase.co/rest/v1/tasks?user_id=eq.master_user
+→ invalid input syntax for type uuid: "master_user"
+```
+
+**원인**:
+- `lib/simple-auth.ts`에서 `USER_ID = 'master_user'` (문자열)
+- Supabase 데이터베이스의 `user_id` 컬럼은 UUID 타입
+- PostgreSQL은 UUID 형식이 아닌 문자열을 거부
+- 모든 테이블에 RLS (Row Level Security) 활성화되어 있어 `auth.uid()` 필요
+
+**해결**:
+1. **USER_ID를 UUID 형식으로 변경**:
+```typescript
+// Before (에러)
+const USER_ID = 'master_user';
+
+// After (수정)
+const USER_ID = '00000000-0000-0000-0000-000000000001';
+```
+
+2. **마스터 사용자 초기화 SQL 생성** (`supabase/init_master_user.sql`):
+```sql
+-- RLS 비활성화 (프로토타입용)
+ALTER TABLE profiles DISABLE ROW LEVEL SECURITY;
+-- ... 모든 테이블
+
+-- 마스터 사용자 생성
+INSERT INTO profiles (id, email, timezone, locale)
+VALUES ('00000000-0000-0000-0000-000000000001', 'master@youth-life.app', 'Asia/Seoul', 'ko-KR');
+
+-- 초기 스탯 생성
+INSERT INTO stats (user_id, date, str, int, wis, cha, grt, total_exp, level)
+VALUES ('00000000-0000-0000-0000-000000000001', CURRENT_DATE, 0, 0, 0, 0, 0, 0, 1);
+```
+
+3. **SUPABASE_SETUP.md 업데이트**:
+- "4. 마스터 사용자 초기화 (필수!)" 섹션 추가
+- SQL 실행 가이드 추가
+
+**영향받은 파일**:
+- `lib/simple-auth.ts` - USER_ID 변경
+- `supabase/init_master_user.sql` - 새로 생성
+- `SUPABASE_SETUP.md` - 문서 업데이트
+
+**중요 액션**:
+⚠️ **사용자가 Supabase SQL Editor에서 `init_master_user.sql`을 실행해야 함!**
+
+**교훈**:
+- **데이터베이스 타입과 앱 코드 타입 일치 필수**
+- UUID 컬럼에는 반드시 UUID 형식 사용
+- RLS가 활성화된 경우 Supabase Auth 없이는 접근 불가
+- 프로토타입에서는 RLS 비활성화 고려
+- 초기 데이터는 마이그레이션 스크립트로 관리
+
+---
+
 ## ✅ 구현 완료 기능 (2025-01-14)
 
 ### 1. OpenAI GPT 통합 완료
