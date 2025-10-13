@@ -1,4 +1,65 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabase';
+import { getCurrentUserId } from '@/lib/simple-auth';
+
 export default function ReportPage() {
+  const [period, setPeriod] = useState<'weekly' | 'monthly'>('weekly');
+  const [weeklyStats, setWeeklyStats] = useState({
+    totalTasks: 0,
+    completedTasks: 0,
+    completionRate: 0,
+    expGained: 0,
+  });
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    loadWeeklyReport();
+  }, [period]);
+
+  const loadWeeklyReport = async () => {
+    try {
+      setIsLoading(true);
+      const userId = getCurrentUserId();
+      const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+
+      // 주간 태스크 통계
+      const { data: tasks, error: tasksError } = await supabase
+        .from('tasks')
+        .select('*')
+        .eq('user_id', userId)
+        .gte('created_at', weekAgo);
+
+      if (tasksError) throw tasksError;
+
+      const completed = tasks?.filter((t) => t.status === 'completed').length || 0;
+      const total = tasks?.length || 0;
+
+      // 주간 스탯 조회
+      const { data: stats, error: statsError } = await supabase
+        .from('stats')
+        .select('*')
+        .eq('user_id', userId)
+        .gte('date', weekAgo.split('T')[0]);
+
+      if (statsError) throw statsError;
+
+      const totalExp = stats?.reduce((acc, s) => acc + (s.totalExp || s.total_exp || 0), 0) || 0;
+
+      setWeeklyStats({
+        totalTasks: total,
+        completedTasks: completed,
+        completionRate: total > 0 ? Math.round((completed / total) * 100) : 0,
+        expGained: totalExp,
+      });
+    } catch (err: any) {
+      console.error('Failed to load report:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <main className="container mx-auto px-4 py-8 max-w-7xl">
       <div className="card-game mb-6">
@@ -6,10 +67,24 @@ export default function ReportPage() {
 
         {/* 탭 */}
         <div className="flex gap-2 mb-6">
-          <button className="px-6 py-2 bg-cyber-blue text-dark-navy rounded-lg font-bold">
+          <button
+            onClick={() => setPeriod('weekly')}
+            className={`px-6 py-2 rounded-lg font-bold ${
+              period === 'weekly'
+                ? 'bg-cyber-blue text-dark-navy'
+                : 'bg-dark-bg border border-dark-border text-gray-400 hover:text-white'
+            }`}
+          >
             주간
           </button>
-          <button className="px-6 py-2 bg-dark-bg border border-dark-border text-gray-400 rounded-lg font-bold hover:text-white">
+          <button
+            onClick={() => setPeriod('monthly')}
+            className={`px-6 py-2 rounded-lg font-bold ${
+              period === 'monthly'
+                ? 'bg-cyber-blue text-dark-navy'
+                : 'bg-dark-bg border border-dark-border text-gray-400 hover:text-white'
+            }`}
+          >
             월간
           </button>
         </div>
@@ -17,58 +92,76 @@ export default function ReportPage() {
         {/* 기간 */}
         <div className="flex items-center justify-between mb-6">
           <button className="text-gray-400 hover:text-white">◀</button>
-          <h2 className="text-xl font-bold text-white">2025년 1월 2주차</h2>
+          <h2 className="text-xl font-bold text-white">
+            {new Date().toLocaleDateString('ko-KR', {
+              year: 'numeric',
+              month: 'long',
+            })}{' '}
+            {period === 'weekly' ? '이번 주' : '이번 달'}
+          </h2>
           <button className="text-gray-400 hover:text-white">▶</button>
         </div>
       </div>
 
       {/* 주간 요약 */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-        <div className="card-game">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-12 h-12 bg-cyber-blue/20 rounded-lg flex items-center justify-center text-2xl">
-              ✅
-            </div>
-            <div>
-              <p className="text-xs text-gray-500">완료율</p>
-              <p className="text-3xl font-bold text-cyber-blue">73%</p>
-            </div>
-          </div>
-          <p className="text-sm text-gray-400">
-            핵심 태스크 <span className="text-white font-bold">15/21</span> 완료
-          </p>
+      {isLoading ? (
+        <div className="flex items-center justify-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-cyber-blue"></div>
         </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+          <div className="card-game">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 bg-cyber-blue/20 rounded-lg flex items-center justify-center text-2xl">
+                ✅
+              </div>
+              <div>
+                <p className="text-xs text-gray-500">완료율</p>
+                <p className="text-3xl font-bold text-cyber-blue">
+                  {weeklyStats.completionRate}%
+                </p>
+              </div>
+            </div>
+            <p className="text-sm text-gray-400">
+              핵심 태스크{' '}
+              <span className="text-white font-bold">
+                {weeklyStats.completedTasks}/{weeklyStats.totalTasks}
+              </span>{' '}
+              완료
+            </p>
+          </div>
 
-        <div className="card-game">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-12 h-12 bg-neon-green/20 rounded-lg flex items-center justify-center text-2xl">
-              ⏱️
+          <div className="card-game">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 bg-neon-green/20 rounded-lg flex items-center justify-center text-2xl">
+                ⏱️
+              </div>
+              <div>
+                <p className="text-xs text-gray-500">태스크</p>
+                <p className="text-3xl font-bold text-neon-green">
+                  {weeklyStats.completedTasks}개
+                </p>
+              </div>
             </div>
-            <div>
-              <p className="text-xs text-gray-500">Deep Work</p>
-              <p className="text-3xl font-bold text-neon-green">12.5h</p>
-            </div>
+            <p className="text-sm text-gray-400">이번 주 완료한 태스크</p>
           </div>
-          <p className="text-sm text-gray-400">
-            목표 10시간 <span className="text-neon-green font-bold">달성</span>
-          </p>
-        </div>
 
-        <div className="card-game">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-12 h-12 bg-neon-pink/20 rounded-lg flex items-center justify-center text-2xl">
-              📊
+          <div className="card-game">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 bg-neon-pink/20 rounded-lg flex items-center justify-center text-2xl">
+                📊
+              </div>
+              <div>
+                <p className="text-xs text-gray-500">경험치</p>
+                <p className="text-3xl font-bold text-neon-pink">
+                  +{weeklyStats.expGained}
+                </p>
+              </div>
             </div>
-            <div>
-              <p className="text-xs text-gray-500">레벨</p>
-              <p className="text-3xl font-bold text-neon-pink">5 → 6</p>
-            </div>
+            <p className="text-sm text-gray-400">획득한 경험치</p>
           </div>
-          <p className="text-sm text-gray-400">
-            경험치 <span className="text-white font-bold">+1,240</span> 획득
-          </p>
         </div>
-      </div>
+      )}
 
       {/* 테마별 수행률 */}
       <div className="card-game mb-6">

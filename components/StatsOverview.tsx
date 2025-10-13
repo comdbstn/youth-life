@@ -1,6 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabase';
+import { getCurrentUserId } from '@/lib/simple-auth';
+import { calculateLevel } from '@/lib/stats';
 
 interface StatGaugeProps {
   label: string;
@@ -62,15 +65,69 @@ function StatGauge({ label, value, max, color, icon }: StatGaugeProps) {
 
 export default function StatsOverview() {
   const [stats, setStats] = useState({
-    str: 12,
-    int: 28,
-    wis: 15,
-    cha: 8,
-    grt: 22,
-    level: 5,
-    totalExp: 1240,
-    nextLevelExp: 1500,
+    str: 0,
+    int: 0,
+    wis: 0,
+    cha: 0,
+    grt: 0,
+    level: 1,
+    totalExp: 0,
+    nextLevelExp: 100,
   });
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    loadStats();
+  }, []);
+
+  const loadStats = async () => {
+    try {
+      setIsLoading(true);
+      const userId = getCurrentUserId();
+      const today = new Date().toISOString().split('T')[0];
+
+      const { data, error } = await supabase
+        .from('stats')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('date', today)
+        .single();
+
+      if (error && error.code !== 'PGRST116') {
+        throw error;
+      }
+
+      if (data) {
+        const levelInfo = calculateLevel(data.totalExp || data.total_exp || 0);
+        setStats({
+          str: data.str || 0,
+          int: data.int || 0,
+          wis: data.wis || 0,
+          cha: data.cha || 0,
+          grt: data.grt || 0,
+          level: levelInfo.level,
+          totalExp: data.totalExp || data.total_exp || 0,
+          nextLevelExp: levelInfo.nextLevelExp,
+        });
+      } else {
+        // 오늘 스탯이 없으면 초기값
+        setStats({
+          str: 0,
+          int: 0,
+          wis: 0,
+          cha: 0,
+          grt: 0,
+          level: 1,
+          totalExp: 0,
+          nextLevelExp: 100,
+        });
+      }
+    } catch (err: any) {
+      console.error('Failed to load stats:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const statConfigs: StatGaugeProps[] = [
     { label: 'STR', value: stats.str, max: 50, color: '#FF6B35', icon: '💪' },
@@ -81,6 +138,16 @@ export default function StatsOverview() {
   ];
 
   const expPercentage = (stats.totalExp / stats.nextLevelExp) * 100;
+
+  if (isLoading) {
+    return (
+      <div className="card-game">
+        <div className="flex items-center justify-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-cyber-blue"></div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="card-game">

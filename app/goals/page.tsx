@@ -1,4 +1,105 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabase';
+import { getCurrentUserId } from '@/lib/simple-auth';
+import type { Goal } from '@/types';
+
+type GoalType = 'monthly' | 'weekly' | 'daily';
+
 export default function GoalsPage() {
+  const [activeTab, setActiveTab] = useState<GoalType>('monthly');
+  const [goals, setGoals] = useState<Goal[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    loadGoals();
+  }, [activeTab]);
+
+  const loadGoals = async () => {
+    try {
+      setIsLoading(true);
+      const userId = getCurrentUserId();
+
+      const { data, error } = await supabase
+        .from('goals')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('goal_type', activeTab)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      setGoals(data || []);
+    } catch (err: any) {
+      console.error('Failed to load goals:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleAddGoal = async () => {
+    const title = prompt('목표 제목을 입력하세요:');
+    if (!title) return;
+
+    const description = prompt('목표 설명 (선택):');
+    const userId = getCurrentUserId();
+
+    try {
+      const newGoal: Partial<Goal> = {
+        user_id: userId,
+        title,
+        description,
+        goal_type: activeTab,
+        status: 'in_progress',
+        progress: 0,
+      };
+
+      const { data, error } = await supabase
+        .from('goals')
+        .insert(newGoal)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setGoals(prev => [data, ...prev]);
+    } catch (err: any) {
+      console.error('Failed to add goal:', err);
+      alert('목표 추가 실패: ' + err.message);
+    }
+  };
+
+  const handleUpdateProgress = async (goalId: string, newProgress: number) => {
+    try {
+      const { error } = await supabase
+        .from('goals')
+        .update({ progress: newProgress })
+        .eq('id', goalId);
+
+      if (error) throw error;
+
+      setGoals(prev =>
+        prev.map(g =>
+          g.id === goalId ? { ...g, progress: newProgress } : g
+        )
+      );
+    } catch (err: any) {
+      console.error('Failed to update progress:', err);
+      alert('진행률 업데이트 실패: ' + err.message);
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    const labels: Record<string, { text: string; color: string }> = {
+      pending: { text: '대기중', color: 'bg-gray-700 text-gray-400' },
+      in_progress: { text: '진행중', color: 'bg-neon-green/20 text-neon-green' },
+      completed: { text: '완료', color: 'bg-cyber-blue/20 text-cyber-blue' },
+      archived: { text: '보관', color: 'bg-gray-800 text-gray-500' },
+    };
+    return labels[status] || labels.pending;
+  };
+
   return (
     <main className="container mx-auto px-4 py-8 max-w-7xl">
       <div className="card-game">
@@ -6,86 +107,128 @@ export default function GoalsPage() {
 
         {/* 월/주/일 탭 */}
         <div className="flex gap-2 mb-6">
-          <button className="px-6 py-2 bg-cyber-blue text-dark-navy rounded-lg font-bold">
+          <button
+            onClick={() => setActiveTab('monthly')}
+            className={`px-6 py-2 rounded-lg font-bold ${
+              activeTab === 'monthly'
+                ? 'bg-cyber-blue text-dark-navy'
+                : 'bg-dark-bg border border-dark-border text-gray-400 hover:text-white'
+            }`}
+          >
             월간 목표
           </button>
-          <button className="px-6 py-2 bg-dark-bg border border-dark-border text-gray-400 rounded-lg font-bold hover:text-white">
+          <button
+            onClick={() => setActiveTab('weekly')}
+            className={`px-6 py-2 rounded-lg font-bold ${
+              activeTab === 'weekly'
+                ? 'bg-cyber-blue text-dark-navy'
+                : 'bg-dark-bg border border-dark-border text-gray-400 hover:text-white'
+            }`}
+          >
             주간 목표
           </button>
-          <button className="px-6 py-2 bg-dark-bg border border-dark-border text-gray-400 rounded-lg font-bold hover:text-white">
+          <button
+            onClick={() => setActiveTab('daily')}
+            className={`px-6 py-2 rounded-lg font-bold ${
+              activeTab === 'daily'
+                ? 'bg-cyber-blue text-dark-navy'
+                : 'bg-dark-bg border border-dark-border text-gray-400 hover:text-white'
+            }`}
+          >
             일일 목표
           </button>
         </div>
 
         {/* 목표 리스트 */}
-        <div className="space-y-4">
-          <div className="bg-dark-bg border-2 border-dark-border rounded-xl p-6">
-            <div className="flex items-start justify-between mb-4">
-              <div>
-                <h3 className="text-xl font-bold text-white mb-2">
-                  수익 루프 시스템 구축
-                </h3>
-                <p className="text-gray-400 text-sm">
-                  AI 기반 콘텐츠 생성 자동화 및 수익화
-                </p>
-              </div>
-              <span className="px-3 py-1 bg-neon-green/20 text-neon-green text-xs font-bold rounded">
-                진행중
-              </span>
-            </div>
-
-            {/* 진행률 */}
-            <div className="mb-4">
-              <div className="flex justify-between text-xs text-gray-400 mb-2">
-                <span>진행률</span>
-                <span>45%</span>
-              </div>
-              <div className="h-2 bg-dark-border rounded-full overflow-hidden">
-                <div className="h-full bg-neon-green" style={{ width: '45%' }} />
-              </div>
-            </div>
-
-            <div className="text-xs text-gray-500">
-              기간: 2025.01.01 - 2025.01.31
-            </div>
+        {isLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-cyber-blue"></div>
           </div>
-
-          {/* 더미 목표 */}
-          <div className="bg-dark-bg border-2 border-dark-border rounded-xl p-6 opacity-60">
-            <div className="flex items-start justify-between mb-4">
-              <div>
-                <h3 className="text-xl font-bold text-white mb-2">
-                  일본어 N2 합격
-                </h3>
-                <p className="text-gray-400 text-sm">
-                  매일 45분 학습 + 주말 모의고사
-                </p>
-              </div>
-              <span className="px-3 py-1 bg-gray-700 text-gray-400 text-xs font-bold rounded">
-                대기중
-              </span>
-            </div>
-
-            <div className="mb-4">
-              <div className="flex justify-between text-xs text-gray-400 mb-2">
-                <span>진행률</span>
-                <span>15%</span>
-              </div>
-              <div className="h-2 bg-dark-border rounded-full overflow-hidden">
-                <div className="h-full bg-cyber-blue" style={{ width: '15%' }} />
-              </div>
-            </div>
-
-            <div className="text-xs text-gray-500">
-              기간: 2025.01.01 - 2025.06.30
-            </div>
+        ) : goals.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-gray-400 mb-4">{activeTab === 'monthly' ? '월간' : activeTab === 'weekly' ? '주간' : '일일'} 목표가 없습니다</p>
+            <button
+              onClick={handleAddGoal}
+              className="px-6 py-3 bg-cyber-blue text-dark-navy rounded-lg hover:bg-cyber-blue/80 transition-colors font-bold"
+            >
+              첫 목표 추가하기
+            </button>
           </div>
-        </div>
+        ) : (
+          <div className="space-y-4">
+            {goals.map((goal) => {
+              const statusInfo = getStatusLabel(goal.status);
+              return (
+                <div
+                  key={goal.id}
+                  className="bg-dark-bg border-2 border-dark-border rounded-xl p-6"
+                >
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex-1">
+                      <h3 className="text-xl font-bold text-white mb-2">
+                        {goal.title}
+                      </h3>
+                      {goal.description && (
+                        <p className="text-gray-400 text-sm">
+                          {goal.description}
+                        </p>
+                      )}
+                    </div>
+                    <span className={`px-3 py-1 text-xs font-bold rounded ${statusInfo.color}`}>
+                      {statusInfo.text}
+                    </span>
+                  </div>
+
+                  {/* 진행률 */}
+                  <div className="mb-4">
+                    <div className="flex justify-between text-xs text-gray-400 mb-2">
+                      <span>진행률</span>
+                      <span>{goal.progress || 0}%</span>
+                    </div>
+                    <div className="h-2 bg-dark-border rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-neon-green transition-all duration-300"
+                        style={{ width: `${goal.progress || 0}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* 진행률 조정 */}
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleUpdateProgress(goal.id, Math.max(0, (goal.progress || 0) - 10))}
+                      className="px-3 py-1 text-xs bg-dark-navy text-gray-400 rounded hover:text-white transition-colors"
+                    >
+                      -10%
+                    </button>
+                    <button
+                      onClick={() => handleUpdateProgress(goal.id, Math.min(100, (goal.progress || 0) + 10))}
+                      className="px-3 py-1 text-xs bg-dark-navy text-gray-400 rounded hover:text-white transition-colors"
+                    >
+                      +10%
+                    </button>
+                  </div>
+
+                  {(goal.startDate || goal.endDate) && (
+                    <div className="text-xs text-gray-500 mt-3">
+                      기간: {goal.startDate?.split('T')[0]} - {goal.endDate?.split('T')[0]}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
 
         {/* 추가 버튼 */}
-        <button className="w-full mt-6 py-4 border-2 border-dashed border-dark-border text-gray-400 rounded-lg hover:border-cyber-blue hover:text-cyber-blue transition-all">
-          + 새 목표 추가
-        </button>
+        {!isLoading && (
+          <button
+            onClick={handleAddGoal}
+            className="w-full mt-6 py-4 border-2 border-dashed border-dark-border text-gray-400 rounded-lg hover:border-cyber-blue hover:text-cyber-blue transition-all"
+          >
+            + 새 목표 추가
+          </button>
+        )}
       </div>
 
       {/* GPT 목표 분해 */}
