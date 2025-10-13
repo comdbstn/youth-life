@@ -208,15 +208,15 @@ export function getFinanceEntries(userId: string, startDate?: string, endDate?: 
   let filtered = allEntries.filter(e => (e.user_id || e.userId) === userId);
 
   if (startDate) {
-    const entryDate = (e: FinanceEntry) => e.entry_date || e.entryDate || e.date || '';
+    const entryDate = (e: FinanceEntry) => e.entry_date || e.entryDate || '';
     filtered = filtered.filter(e => entryDate(e) >= startDate);
   }
   if (endDate) {
-    const entryDate = (e: FinanceEntry) => e.entry_date || e.entryDate || e.date || '';
+    const entryDate = (e: FinanceEntry) => e.entry_date || e.entryDate || '';
     filtered = filtered.filter(e => entryDate(e) <= endDate);
   }
 
-  const getDate = (e: FinanceEntry) => e.entry_date || e.entryDate || e.date || '';
+  const getDate = (e: FinanceEntry) => e.entry_date || e.entryDate || '';
   return filtered.sort((a, b) => getDate(b).localeCompare(getDate(a)));
 }
 
