@@ -11,6 +11,8 @@ export default function GoalsPage() {
   const [activeTab, setActiveTab] = useState<GoalType>('monthly');
   const [goals, setGoals] = useState<Goal[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isBreakingDown, setIsBreakingDown] = useState(false);
+  const [selectedGoalForBreakdown, setSelectedGoalForBreakdown] = useState<string | null>(null);
 
   useEffect(() => {
     loadGoals();
@@ -87,6 +89,33 @@ export default function GoalsPage() {
     } catch (err: any) {
       console.error('Failed to update progress:', err);
       alert('진행률 업데이트 실패: ' + err.message);
+    }
+  };
+
+  const handleBreakdownGoal = async (goalId: string) => {
+    try {
+      setIsBreakingDown(true);
+      setSelectedGoalForBreakdown(goalId);
+      const userId = getCurrentUserId();
+
+      const response = await fetch('/api/goals/breakdown', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ goalId, userId }),
+      });
+
+      if (!response.ok) {
+        throw new Error('목표 분해 실패');
+      }
+
+      const result = await response.json();
+      alert(`✨ ${result.count}개의 태스크가 생성되었습니다!\n태스크 페이지에서 확인하세요.`);
+    } catch (err: any) {
+      console.error('Failed to breakdown goal:', err);
+      alert('목표 분해 실패: ' + err.message);
+    } finally {
+      setIsBreakingDown(false);
+      setSelectedGoalForBreakdown(null);
     }
   };
 
@@ -193,7 +222,7 @@ export default function GoalsPage() {
                     </div>
                   </div>
 
-                  {/* 진행률 조정 */}
+                  {/* 진행률 조정 & AI 분해 */}
                   <div className="flex gap-2">
                     <button
                       onClick={() => handleUpdateProgress(goal.id, Math.max(0, (goal.progress || 0) - 10))}
@@ -206,6 +235,13 @@ export default function GoalsPage() {
                       className="px-3 py-1 text-xs bg-dark-navy text-gray-400 rounded hover:text-white transition-colors"
                     >
                       +10%
+                    </button>
+                    <button
+                      onClick={() => handleBreakdownGoal(goal.id)}
+                      disabled={isBreakingDown && selectedGoalForBreakdown === goal.id}
+                      className="ml-auto px-4 py-1 text-xs bg-gradient-to-r from-cyber-blue to-neon-pink text-white rounded hover:opacity-80 transition-opacity disabled:opacity-50"
+                    >
+                      {isBreakingDown && selectedGoalForBreakdown === goal.id ? '분해 중...' : '✨ AI 분해'}
                     </button>
                   </div>
 
@@ -231,15 +267,18 @@ export default function GoalsPage() {
         )}
       </div>
 
-      {/* GPT 목표 분해 */}
+      {/* GPT 목표 분해 안내 */}
       <div className="card-game mt-6">
         <h2 className="text-xl font-bold text-neon-pink mb-4">✨ AI 목표 분해</h2>
         <p className="text-gray-400 text-sm mb-4">
           큰 목표를 실행 가능한 작은 태스크로 자동 분해합니다.
         </p>
-        <button className="w-full py-3 bg-gradient-to-r from-cyber-blue to-neon-pink text-white rounded-lg font-bold hover:opacity-80 transition-opacity">
-          목표를 태스크로 변환
-        </button>
+        <div className="bg-dark-bg rounded-lg p-4 border border-dark-border">
+          <p className="text-sm text-gray-400">
+            💡 각 목표 카드의 <span className="text-neon-pink font-bold">&quot;✨ AI 분해&quot;</span> 버튼을 클릭하면
+            GPT-4가 목표를 구체적인 태스크로 자동 분해합니다.
+          </p>
+        </div>
       </div>
     </main>
   );
