@@ -726,6 +726,43 @@ let filtered = allTasks.filter(t => (t.user_id || t.userId) === userId);
 
 ---
 
+### FinanceEntry 타입 불일치 이슈 (2025-01-14 해결)
+**문제**: `lib/storage.ts`에서 존재하지 않는 `date` 속성에 접근하여 TypeScript 컴파일 에러
+
+**에러 위치**: `lib/storage.ts:211`
+```typescript
+// 에러 발생 코드
+const entryDate = (e: FinanceEntry) => e.entry_date || e.entryDate || e.date || '';
+// Property 'date' does not exist on type 'FinanceEntry'
+```
+
+**원인**:
+- FinanceEntry 타입은 `entry_date` (primary) + `entryDate?` (alias)만 정의됨
+- `date` 속성은 존재하지 않음
+- 다른 타입들과 혼동하여 `date` 필드를 추가로 체크
+
+**해결**:
+```typescript
+// Before (에러)
+const entryDate = (e: FinanceEntry) => e.entry_date || e.entryDate || e.date || '';
+const getDate = (e: FinanceEntry) => e.entry_date || e.entryDate || e.date || '';
+
+// After (수정)
+const entryDate = (e: FinanceEntry) => e.entry_date || e.entryDate || '';
+const getDate = (e: FinanceEntry) => e.entry_date || e.entryDate || '';
+```
+
+**영향받은 파일**:
+- `lib/storage.ts` - getFinanceEntries 함수 (3곳)
+
+**교훈**:
+- **타입 정의를 정확히 확인하고 접근**
+- 각 타입별로 정의된 필드만 사용
+- 존재하지 않는 fallback 필드 추가하지 말기
+- 타입 시스템을 신뢰하고 정의된 필드만 접근
+
+---
+
 ## ✅ 구현 완료 기능 (2025-01-14)
 
 ### 1. OpenAI GPT 통합 완료
