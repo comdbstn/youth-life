@@ -676,6 +676,56 @@ statGain.str = Math.floor(duration / 10);
 
 ---
 
+### lib/storage.ts snake_case 이슈 (2025-01-14 해결)
+**문제**: `lib/storage.ts`에서 Stats 객체 생성 시 camelCase 사용으로 TypeScript 컴파일 에러
+
+**에러 위치**: `lib/storage.ts:92`
+```typescript
+// 에러 발생 코드
+const initialStats: Stats = {
+  id: `stats_${Date.now()}`,
+  userId,  // 'user_id' 필요
+  totalExp: 0,  // 'total_exp' 필요
+  // ...
+};
+// Type is missing properties: user_id, total_exp
+```
+
+**원인**:
+- 전체 프로젝트를 snake_case로 전환했지만 `lib/storage.ts`는 누락
+- Stats 타입은 snake_case 필드 요구: `user_id`, `total_exp`
+- 모든 filter/find 함수도 camelCase 사용 (userId, plannedAt 등)
+
+**해결**:
+```typescript
+// Before (에러)
+const initialStats: Stats = {
+  userId,
+  totalExp: 0,
+  // ...
+};
+let filtered = allTasks.filter(t => t.userId === userId);
+
+// After (수정)
+const initialStats: Stats = {
+  user_id: userId,
+  total_exp: 0,
+  // ...
+};
+let filtered = allTasks.filter(t => (t.user_id || t.userId) === userId);
+```
+
+**영향받은 파일**:
+- `lib/storage.ts` - 모든 함수 (initializeUserData, getTasks, getGoals, getStats, getFinanceEntries, getDayPlan, getReflection)
+
+**교훈**:
+- **프로젝트 전체 패턴 변경 시 모든 파일 검토 필수**
+- localStorage 래퍼도 DB 스키마와 일관성 유지
+- 레거시 데이터 호환성 위해 `|| fallback` 패턴 유지
+- Grep으로 프로젝트 전체 camelCase 검색 후 수정
+
+---
+
 ## ✅ 구현 완료 기능 (2025-01-14)
 
 ### 1. OpenAI GPT 통합 완료
