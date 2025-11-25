@@ -1,6 +1,370 @@
-# 🚀 Youth Life - 배포 체크리스트
+# 🚀 Youth Life - Vercel 배포 가이드
 
-> 마지막 업데이트: 2025-01-14
+> 마지막 업데이트: 2025-11-26
+
+---
+
+## ✅ 코드 레벨 버그 수정 완료
+
+### 1. Supabase 싱글톤 패턴 구현 ✅
+**파일**: `lib/supabase.ts`
+
+**문제**: "Multiple GoTrueClient instances detected" 경고
+**원인**: Supabase 클라이언트가 여러 번 생성됨
+**해결**:
+```typescript
+let supabaseInstance: SupabaseClient | null = null;
+
+export const getSupabase = () => {
+  if (!supabaseInstance) {
+    supabaseInstance = createClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+      }
+    });
+  }
+  return supabaseInstance;
+};
+```
+
+### 2. favicon.ico 404 에러 해결 ✅
+**파일**: `public/favicon.ico`
+**해결**: 파비콘 파일 추가 완료
+
+### 3. Vercel 프로젝트 연결 ✅
+**프로젝트**: comdbstns-projects/youth-life
+**명령어**: `vercel link --yes` 실행 완료
+
+---
+
+## 🔴 사용자가 직접 해야 할 필수 작업
+
+### ⚠️ 중요: 현재 배포 실패 원인
+
+에러 로그 분석 결과:
+```
+GET https://fqrfhochysbdyjxtoned.supabase.co/rest/v1/tasks?...
+Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+```
+
+**근본 원인**: Vercel에 Supabase 환경 변수가 설정되지 않았거나 잘못되었습니다.
+
+---
+
+## 📋 필수 작업 순서
+
+### STEP 1: Supabase 프로젝트 URL 확인
+
+1. [Supabase Dashboard](https://supabase.com/dashboard) 접속
+2. 사용 중인 프로젝트 선택
+3. **Settings** → **API** 클릭
+4. 다음 정보 확인 및 복사:
+   - **Project URL**: `https://xxxxxxxxx.supabase.co`
+   - **anon public key**: `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`
+   - **service_role key** (선택사항): `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`
+
+**⚠️ 확인**: 에러 로그의 `fqrfhochysbdyjxtoned.supabase.co`가 실제 프로젝트 URL인지 확인하세요.
+
+---
+
+### STEP 2: Vercel 환경 변수 설정 (필수!)
+
+#### 방법 1: Vercel Dashboard (권장)
+
+1. [Vercel Dashboard](https://vercel.com/dashboard) 접속
+2. **youth-life** 프로젝트 클릭
+3. **Settings** → **Environment Variables** 메뉴 클릭
+4. 다음 변수들을 추가:
+
+| Name | Value | Environment |
+|------|-------|-------------|
+| `NEXT_PUBLIC_SUPABASE_URL` | `https://your-project.supabase.co` | Production, Preview, Development |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | `eyJhbGciOiJIUzI1...` | Production, Preview, Development |
+| `SUPABASE_SERVICE_ROLE_KEY` | `eyJhbGciOiJIUzI1...` (선택) | Production, Preview, Development |
+| `OPENAI_API_KEY` | `sk-...` (선택, GPT 기능용) | Production, Preview, Development |
+
+5. **Save** 버튼 클릭
+
+#### 방법 2: Vercel CLI
+
+터미널에서 실행:
+
+```bash
+# Supabase URL 설정
+vercel env add NEXT_PUBLIC_SUPABASE_URL
+# 프롬프트: 값 입력 후 Production/Preview/Development 모두 선택
+
+# Supabase Anon Key 설정
+vercel env add NEXT_PUBLIC_SUPABASE_ANON_KEY
+# 프롬프트: 값 입력 후 Production/Preview/Development 모두 선택
+
+# Service Role Key (선택사항)
+vercel env add SUPABASE_SERVICE_ROLE_KEY
+
+# OpenAI API Key (선택사항)
+vercel env add OPENAI_API_KEY
+```
+
+---
+
+### STEP 3: 로컬 환경 변수 설정 (.env.local)
+
+로컬 개발을 위해 `.env.local` 파일 업데이트:
+
+```bash
+# Supabase
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+
+# OpenAI (선택)
+OPENAI_API_KEY=sk-...
+
+# App Config
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+```
+
+---
+
+### STEP 4: Supabase 테이블 확인 및 생성
+
+#### 4-1. 기존 테이블 확인
+
+Supabase SQL Editor에서 실행:
+
+```sql
+SELECT table_name
+FROM information_schema.tables
+WHERE table_schema = 'public'
+ORDER BY table_name;
+```
+
+#### 4-2. 필요한 테이블 목록
+
+- ✅ profiles
+- ✅ day_plans
+- ✅ tasks
+- ✅ stats
+- ✅ achievements
+- ✅ streaks
+- ✅ goals
+- ✅ calendar_memos ⚠️ (새로 추가됨 - 아래 SQL 필요!)
+- ✅ finance_entries
+- ✅ reflections
+
+#### 4-3. calendar_memos 테이블 생성 (필수!)
+
+**이 테이블이 없으면 캘린더 페이지가 작동하지 않습니다!**
+
+Supabase SQL Editor에서 실행:
+
+```sql
+-- calendar_memos 테이블 생성
+CREATE TABLE IF NOT EXISTS calendar_memos (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
+  date DATE NOT NULL,
+  title TEXT NOT NULL,
+  content TEXT,
+  color TEXT DEFAULT 'blue' CHECK (color IN ('blue', 'green', 'red', 'yellow', 'purple', 'pink', 'gray')),
+  all_day BOOLEAN DEFAULT true,
+  start_time TIME,
+  end_time TIME,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 인덱스 생성
+CREATE INDEX IF NOT EXISTS idx_calendar_memos_user_date
+ON calendar_memos(user_id, date);
+
+-- updated_at 자동 업데이트 트리거
+CREATE OR REPLACE FUNCTION update_calendar_memos_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_calendar_memos_updated_at
+BEFORE UPDATE ON calendar_memos
+FOR EACH ROW
+EXECUTE FUNCTION update_calendar_memos_updated_at();
+
+-- RLS 비활성화 (개인 사용)
+ALTER TABLE calendar_memos DISABLE ROW LEVEL SECURITY;
+```
+
+#### 4-4. 마스터 사용자 확인
+
+```sql
+-- 마스터 사용자 존재 확인
+SELECT * FROM profiles WHERE id = '00000000-0000-0000-0000-000000000001';
+
+-- 없으면 생성
+INSERT INTO profiles (id, email, timezone, locale)
+VALUES (
+  '00000000-0000-0000-0000-000000000001',
+  'master@youth-life.app',
+  'Asia/Seoul',
+  'ko-KR'
+)
+ON CONFLICT (id) DO NOTHING;
+```
+
+---
+
+### STEP 5: 재배포
+
+환경 변수 설정 후 재배포:
+
+#### 방법 1: Git Push (권장)
+```bash
+git push origin master
+```
+Vercel이 자동으로 감지해서 재배포합니다.
+
+#### 방법 2: Vercel Dashboard
+1. Vercel Dashboard → **Deployments** 탭
+2. 최신 배포 옆 **...** 메뉴 → **Redeploy** 클릭
+
+#### 방법 3: Vercel CLI
+```bash
+vercel --prod
+```
+
+---
+
+## 🔍 배포 후 확인 사항
+
+### 1. 배포 상태 확인
+
+```bash
+vercel ls
+```
+
+최신 배포의 **STATUS**가 `READY`인지 확인
+
+### 2. 브라우저 콘솔 확인 (F12)
+
+배포된 사이트 접속 후:
+
+#### ✅ 다음 에러가 없어야 함:
+- ❌ `ERR_NAME_NOT_RESOLVED`
+- ❌ `Multiple GoTrueClient instances`
+- ❌ `Failed to load resource: favicon.ico`
+- ❌ `Failed to load tasks/stats`
+
+#### ✅ 정상 작동 확인:
+- ✅ Tasks 데이터 로드
+- ✅ Stats 데이터 로드
+- ✅ Supabase 연결 성공
+
+### 3. 주요 기능 테스트
+
+1. **로그인** (`/login`)
+   - 비밀번호: `bo020623`
+   - master 계정으로 로그인 성공
+
+2. **대시보드** (`/`)
+   - 오늘 테마 표시 확인
+   - DayPlan 자동 초기화 확인
+   - 아침 코치 GPT 버튼 (OpenAI API 키 설정 시)
+
+3. **목표** (`/goals`)
+   - 월간/주간/일일 목표 탭 전환
+   - 목표 추가/수정/삭제
+
+4. **캘린더** (`/calendar`)
+   - 월간 뷰 표시
+   - 날짜 클릭 → 메모 추가
+   - 색상 태그 선택
+
+5. **금전** (`/finance`)
+   - 수입/지출 입력
+   - 주간 통계 표시
+
+6. **성찰** (`/reflection`)
+   - 5문항 작성
+   - GPT 밤 코치 피드백 (OpenAI API 키 설정 시)
+
+7. **스탯** (`/stats`)
+   - 게임 스탯 표시
+   - 업적 자동 체크
+   - 연속 기록 표시
+
+8. **리포트** (`/report`)
+   - 주간 완료율 계산
+   - 태스크 통계 표시
+
+---
+
+## 🆘 트러블슈팅
+
+### "ERR_NAME_NOT_RESOLVED" 계속 발생
+**원인**: Vercel 환경 변수 미설정 또는 잘못된 URL
+**해결**:
+1. Vercel Dashboard → Settings → Environment Variables 확인
+2. `NEXT_PUBLIC_SUPABASE_URL`이 올바른지 확인
+3. `NEXT_PUBLIC_` 접두사가 있는지 확인 (클라이언트 변수 필수)
+4. 재배포 실행
+
+### "Failed to fetch" 에러
+**원인**: Supabase RLS 또는 테이블 미생성
+**해결**:
+1. Supabase SQL Editor에서 테이블 존재 확인
+2. RLS 비활성화 확인: `ALTER TABLE xxx DISABLE ROW LEVEL SECURITY;`
+3. profiles 테이블에 master 사용자 확인
+
+### GPT 코치가 작동 안 함
+**원인**: OpenAI API 키 미설정
+**해결**:
+1. Vercel에 `OPENAI_API_KEY` 설정 확인
+2. OpenAI API 크레딧 잔액 확인
+3. API 키 유효성 확인
+
+### 캘린더 페이지 에러
+**원인**: calendar_memos 테이블 미생성
+**해결**:
+1. STEP 4-3의 SQL 실행
+2. 테이블 생성 확인: `SELECT * FROM calendar_memos LIMIT 1;`
+
+### 로컬에서는 되는데 Vercel에서 안 됨
+**원인**: 환경 변수 불일치
+**해결**:
+1. `.env.local` 내용과 Vercel 환경 변수 비교
+2. Vercel 환경 변수가 Production/Preview/Development 모두 설정되었는지 확인
+3. 재배포 후 다시 확인
+
+---
+
+## 📝 요약
+
+### ✅ 이미 완료된 작업 (코드 수정)
+1. Supabase 싱글톤 패턴 적용 (`lib/supabase.ts`)
+2. Favicon 추가 (`public/favicon.ico`)
+3. Vercel 프로젝트 연결 (`vercel link`)
+4. Git 커밋 완료
+
+### 🔴 사용자가 해야 할 작업
+1. **Supabase URL 확인** (Dashboard → Settings → API)
+2. **Vercel 환경 변수 설정** (가장 중요!)
+   - NEXT_PUBLIC_SUPABASE_URL
+   - NEXT_PUBLIC_SUPABASE_ANON_KEY
+   - SUPABASE_SERVICE_ROLE_KEY (선택)
+   - OPENAI_API_KEY (선택)
+3. **Supabase calendar_memos 테이블 생성** (SQL 실행)
+4. **.env.local 파일 업데이트** (로컬 개발용)
+5. **재배포** (`git push origin master`)
+
+### 🎯 배포 후
+- 브라우저 콘솔 에러 확인
+- 모든 페이지 기능 테스트
+- 데이터 CRUD 작동 확인
+
+---
 
 ## ✅ 프로덕션 준비 완료 상태
 
