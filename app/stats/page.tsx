@@ -1,6 +1,57 @@
+'use client';
+
+import { useState, useEffect } from 'react';
 import StatsOverview from '@/components/StatsOverview';
+import { getCurrentUserId } from '@/lib/simple-auth';
+import { checkAchievements, type Achievement } from '@/lib/achievements';
+import { supabase } from '@/lib/supabase';
 
 export default function StatsPage() {
+  const [achievements, setAchievements] = useState<Achievement[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [streaks, setStreaks] = useState<any[]>([]);
+
+  useEffect(() => {
+    loadAchievements();
+    loadStreaks();
+  }, []);
+
+  const loadAchievements = async () => {
+    try {
+      setIsLoading(true);
+      const userId = getCurrentUserId();
+      const result = await checkAchievements(userId);
+      setAchievements(result);
+    } catch (err) {
+      console.error('Failed to load achievements:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const loadStreaks = async () => {
+    try {
+      const userId = getCurrentUserId();
+      const { data, error } = await supabase
+        .from('streaks')
+        .select('*')
+        .eq('user_id', userId);
+
+      if (error) throw error;
+      setStreaks(data || []);
+    } catch (err) {
+      console.error('Failed to load streaks:', err);
+    }
+  };
+
+  const getStreakByMetric = (metric: string) => {
+    return streaks.find((s) => s.metric === metric);
+  };
+
+  const reflectionStreak = getStreakByMetric('reflection');
+  const deepWorkStreak = getStreakByMetric('deep_work');
+  const noEmotionalSpendingStreak = getStreakByMetric('no_emotional_spending');
+
   return (
     <main className="container mx-auto px-4 py-8 max-w-7xl">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -11,55 +62,42 @@ export default function StatsPage() {
           {/* 업적 */}
           <div className="card-game">
             <h2 className="text-2xl font-bold text-neon-gold mb-6">🏆 업적</h2>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-dark-bg rounded-xl p-4 border-2 border-neon-green">
-                <div className="text-center mb-2">
-                  <span className="text-4xl">🔥</span>
-                </div>
-                <h3 className="text-sm font-bold text-white text-center mb-1">
-                  7일 연속 성찰
-                </h3>
-                <p className="text-xs text-gray-500 text-center">
-                  2025.01.07 달성
-                </p>
+            {isLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-cyber-blue"></div>
               </div>
-
-              <div className="bg-dark-bg rounded-xl p-4 border-2 border-cyber-blue">
-                <div className="text-center mb-2">
-                  <span className="text-4xl">🧠</span>
-                </div>
-                <h3 className="text-sm font-bold text-white text-center mb-1">
-                  Deep Work 마스터
-                </h3>
-                <p className="text-xs text-gray-500 text-center">
-                  주간 10시간 달성
-                </p>
+            ) : (
+              <div className="grid grid-cols-2 gap-4">
+                {achievements.map((achievement) => (
+                  <div
+                    key={achievement.id}
+                    className={`bg-dark-bg rounded-xl p-4 border-2 ${
+                      achievement.unlocked
+                        ? 'border-neon-green'
+                        : 'border-dark-border opacity-50'
+                    }`}
+                  >
+                    <div className="text-center mb-2">
+                      <span className="text-4xl">{achievement.icon}</span>
+                    </div>
+                    <h3
+                      className={`text-sm font-bold text-center mb-1 ${
+                        achievement.unlocked ? 'text-white' : 'text-gray-500'
+                      }`}
+                    >
+                      {achievement.title}
+                    </h3>
+                    <p
+                      className={`text-xs text-center ${
+                        achievement.unlocked ? 'text-gray-400' : 'text-gray-600'
+                      }`}
+                    >
+                      {achievement.description}
+                    </p>
+                  </div>
+                ))}
               </div>
-
-              <div className="bg-dark-bg rounded-xl p-4 border-2 border-dark-border opacity-50">
-                <div className="text-center mb-2">
-                  <span className="text-4xl">💰</span>
-                </div>
-                <h3 className="text-sm font-bold text-gray-500 text-center mb-1">
-                  감정지출 제로
-                </h3>
-                <p className="text-xs text-gray-600 text-center">
-                  월간 0건 달성 필요
-                </p>
-              </div>
-
-              <div className="bg-dark-bg rounded-xl p-4 border-2 border-dark-border opacity-50">
-                <div className="text-center mb-2">
-                  <span className="text-4xl">⚡</span>
-                </div>
-                <h3 className="text-sm font-bold text-gray-500 text-center mb-1">
-                  레벨 10 돌파
-                </h3>
-                <p className="text-xs text-gray-600 text-center">
-                  현재 레벨 5
-                </p>
-              </div>
-            </div>
+            )}
           </div>
         </div>
 
@@ -148,8 +186,12 @@ export default function StatsPage() {
                   <p className="text-xs text-gray-500">현재 기록</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-3xl font-bold text-neon-green">7일</p>
-                  <p className="text-xs text-gray-500">최고: 12일</p>
+                  <p className="text-3xl font-bold text-neon-green">
+                    {reflectionStreak?.count || 0}일
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    최고: {reflectionStreak?.best_streak || reflectionStreak?.bestStreak || 0}일
+                  </p>
                 </div>
               </div>
 
@@ -159,8 +201,12 @@ export default function StatsPage() {
                   <p className="text-xs text-gray-500">현재 기록</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-3xl font-bold text-cyber-blue">5일</p>
-                  <p className="text-xs text-gray-500">최고: 8일</p>
+                  <p className="text-3xl font-bold text-cyber-blue">
+                    {deepWorkStreak?.count || 0}일
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    최고: {deepWorkStreak?.best_streak || deepWorkStreak?.bestStreak || 0}일
+                  </p>
                 </div>
               </div>
 
@@ -170,8 +216,12 @@ export default function StatsPage() {
                   <p className="text-xs text-gray-500">현재 기록</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-3xl font-bold text-neon-gold">3일</p>
-                  <p className="text-xs text-gray-500">최고: 14일</p>
+                  <p className="text-3xl font-bold text-neon-gold">
+                    {noEmotionalSpendingStreak?.count || 0}일
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    최고: {noEmotionalSpendingStreak?.best_streak || noEmotionalSpendingStreak?.bestStreak || 0}일
+                  </p>
                 </div>
               </div>
             </div>

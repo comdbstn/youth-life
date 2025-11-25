@@ -22,36 +22,52 @@ export default function ReportPage() {
     try {
       setIsLoading(true);
       const userId = getCurrentUserId();
-      const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      const today = new Date();
+      const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+      const weekAgoStr = weekAgo.toISOString().split('T')[0];
 
       // 주간 태스크 통계
       const { data: tasks, error: tasksError } = await supabase
         .from('tasks')
         .select('*')
         .eq('user_id', userId)
-        .gte('created_at', weekAgo);
+        .gte('planned_at', weekAgoStr);
 
       if (tasksError) throw tasksError;
 
       const completed = tasks?.filter((t) => t.status === 'completed').length || 0;
       const total = tasks?.length || 0;
 
-      // 주간 스탯 조회
-      const { data: stats, error: statsError } = await supabase
+      // 주간 스탯 조회 (최신 스탯 기준)
+      const { data: latestStat, error: statsError } = await supabase
         .from('stats')
         .select('*')
         .eq('user_id', userId)
-        .gte('date', weekAgo.split('T')[0]);
+        .order('date', { ascending: false })
+        .limit(1)
+        .single();
 
-      if (statsError) throw statsError;
+      if (statsError && statsError.code !== 'PGRST116') {
+        console.error('Stats error:', statsError);
+      }
 
-      const totalExp = stats?.reduce((acc, s) => acc + (s.totalExp || s.total_exp || 0), 0) || 0;
+      // 일주일 전 스탯
+      const { data: oldStat } = await supabase
+        .from('stats')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('date', weekAgoStr)
+        .single();
+
+      const currentExp = latestStat ? (latestStat.total_exp || 0) : 0;
+      const oldExp = oldStat ? (oldStat.total_exp || 0) : 0;
+      const expGained = currentExp - oldExp;
 
       setWeeklyStats({
         totalTasks: total,
         completedTasks: completed,
         completionRate: total > 0 ? Math.round((completed / total) * 100) : 0,
-        expGained: totalExp,
+        expGained: expGained > 0 ? expGained : 0,
       });
     } catch (err: any) {
       console.error('Failed to load report:', err);

@@ -16,7 +16,9 @@ export default function Navigation() {
   const navItems = [
     { href: '/', label: '홈', icon: '🏠' },
     { href: '/goals', label: '목표', icon: '🎯' },
+    { href: '/calendar', label: '캘린더', icon: '📅' },
     { href: '/finance', label: '금전', icon: '💰' },
+    { href: '/reflection', label: '성찰', icon: '🌙' },
     { href: '/stats', label: '스탯', icon: '📊' },
     { href: '/report', label: '리포트', icon: '📈' },
   ];

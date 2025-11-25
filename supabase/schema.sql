@@ -137,6 +137,21 @@ CREATE TABLE IF NOT EXISTS streaks (
   UNIQUE(user_id, metric)
 );
 
+-- 캘린더 메모 테이블
+CREATE TABLE IF NOT EXISTS calendar_memos (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
+  date DATE NOT NULL,
+  title TEXT NOT NULL,
+  content TEXT,
+  color TEXT DEFAULT 'blue' CHECK (color IN ('blue', 'green', 'red', 'yellow', 'purple', 'pink', 'gray')),
+  all_day BOOLEAN DEFAULT true,
+  start_time TIME,
+  end_time TIME,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- 인덱스 생성
 CREATE INDEX IF NOT EXISTS idx_goals_user_id ON goals(user_id);
 CREATE INDEX IF NOT EXISTS idx_goals_level ON goals(level);
@@ -149,6 +164,7 @@ CREATE INDEX IF NOT EXISTS idx_day_plans_user_date ON day_plans(user_id, date);
 CREATE INDEX IF NOT EXISTS idx_reflections_user_date ON reflections(user_id, date);
 CREATE INDEX IF NOT EXISTS idx_finance_user_date ON finance_entries(user_id, date);
 CREATE INDEX IF NOT EXISTS idx_stats_user_date ON stats(user_id, date);
+CREATE INDEX IF NOT EXISTS idx_calendar_memos_user_date ON calendar_memos(user_id, date);
 
 -- Row Level Security (RLS) 활성화
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
@@ -160,6 +176,7 @@ ALTER TABLE reflections ENABLE ROW LEVEL SECURITY;
 ALTER TABLE finance_entries ENABLE ROW LEVEL SECURITY;
 ALTER TABLE stats ENABLE ROW LEVEL SECURITY;
 ALTER TABLE streaks ENABLE ROW LEVEL SECURITY;
+ALTER TABLE calendar_memos ENABLE ROW LEVEL SECURITY;
 
 -- RLS 정책: 사용자는 자신의 데이터만 접근 가능
 CREATE POLICY "Users can view own profile" ON profiles FOR SELECT USING (auth.uid() = id);
@@ -201,6 +218,11 @@ CREATE POLICY "Users can view own streaks" ON streaks FOR SELECT USING (auth.uid
 CREATE POLICY "Users can insert own streaks" ON streaks FOR INSERT WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "Users can update own streaks" ON streaks FOR UPDATE USING (auth.uid() = user_id);
 
+CREATE POLICY "Users can view own calendar_memos" ON calendar_memos FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can insert own calendar_memos" ON calendar_memos FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can update own calendar_memos" ON calendar_memos FOR UPDATE USING (auth.uid() = user_id);
+CREATE POLICY "Users can delete own calendar_memos" ON calendar_memos FOR DELETE USING (auth.uid() = user_id);
+
 -- 자동 업데이트 타임스탬프 함수
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
@@ -236,4 +258,7 @@ CREATE TRIGGER update_stats_updated_at BEFORE UPDATE ON stats
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 CREATE TRIGGER update_streaks_updated_at BEFORE UPDATE ON streaks
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_calendar_memos_updated_at BEFORE UPDATE ON calendar_memos
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();

@@ -187,3 +187,25 @@ export interface User {
   // camelCase aliases
   createdAt?: string;
 }
+
+// 캘린더 메모 (DB snake_case)
+export interface CalendarMemo {
+  id: string;
+  user_id: string;
+  date: string;
+  title: string;
+  content?: string;
+  color?: string; // 색상 태그 (예: 'blue', 'green', 'red', 'yellow', 'purple')
+  all_day: boolean;
+  start_time?: string; // HH:mm 형식
+  end_time?: string;   // HH:mm 형식
+  created_at?: string;
+  updated_at?: string;
+  // camelCase aliases
+  userId?: string;
+  allDay?: boolean;
+  startTime?: string;
+  endTime?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
