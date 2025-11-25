@@ -5,7 +5,9 @@
       "Bash(git commit:*)",
       "Bash(git push:*)",
       "Bash(vercel env:*)",
-      "Bash(vercel link:*)"
+      "Bash(vercel link:*)",
+      "Bash(vercel ls:*)",
+      "Bash(npm run build:*)"
     ],
     "deny": [],
     "ask": []
