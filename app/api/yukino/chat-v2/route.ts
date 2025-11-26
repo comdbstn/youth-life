@@ -430,7 +430,7 @@ ${context.memories.map(m => `- [${m.memory_type}] ${m.content} (중요도: ${m.i
 
     if (userSaveError) {
       console.error('[Yukino] Failed to save user message:', userSaveError);
-      throw new Error('대화 저장 실패. Supabase 테이블 설정을 확인하세요.');
+      throw new Error(`대화 저장 실패: ${userSaveError.message} (code: ${userSaveError.code})`);
     }
 
     // 유키노 응답 저장
@@ -443,7 +443,7 @@ ${context.memories.map(m => `- [${m.memory_type}] ${m.content} (중요도: ${m.i
 
     if (yukinoSaveError) {
       console.error('[Yukino] Failed to save yukino response:', yukinoSaveError);
-      throw new Error('대화 저장 실패. Supabase 테이블 설정을 확인하세요.');
+      throw new Error(`대화 저장 실패: ${yukinoSaveError.message} (code: ${yukinoSaveError.code})`);
     }
 
     return NextResponse.json({

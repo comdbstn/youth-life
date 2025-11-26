@@ -8,7 +8,9 @@
       "Bash(vercel link:*)",
       "Bash(vercel ls:*)",
       "Bash(npm run build:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(vercel logs:*)",
+      "Bash(curl:*)"
     ],
     "deny": [],
     "ask": []
