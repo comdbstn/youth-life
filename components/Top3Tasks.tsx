@@ -453,7 +453,7 @@ export default function Top3Tasks() {
       setTasks(prev =>
         prev.map(t =>
           t.id === task.id
-            ? { ...t, status: newStatus, completed_at: newStatus === 'completed' ? new Date().toISOString() : null }
+            ? { ...t, status: newStatus, completed_at: newStatus === 'completed' ? new Date().toISOString() : undefined }
             : t
         )
       );
