@@ -263,11 +263,9 @@ export default function GoalsPage() {
                     </button>
                   </div>
 
-                  {(goal.startDate || goal.endDate) && (
-                    <div className="text-xs text-gray-500 mt-3">
-                      기간: {goal.startDate?.split('T')[0]} - {goal.endDate?.split('T')[0]}
-                    </div>
-                  )}
+                  <div className="text-xs text-gray-500 mt-3">
+                    기간: {goal.period_start} ~ {goal.period_end}
+                  </div>
                 </div>
               );
             })}
