@@ -240,12 +240,6 @@ async function executeFunction(functionName: string, args: any, userId: string) 
         .select()
         .single();
 
-      // 테이블이 없으면 스킵
-      if (error && error.code === '42P01') {
-        console.log('[Yukino] Memory saving skipped - table does not exist yet.');
-        return { success: true, message: 'Memory table not created yet, skipped saving' };
-      }
-
       if (error) throw error;
       return { success: true, memory: data };
     }
@@ -286,8 +280,17 @@ export async function POST(request: NextRequest) {
       .order('created_at', { ascending: true })
       .limit(20);
 
-    // 테이블이 없으면 빈 배열 사용
-    const conversations = (historyError && historyError.code === '42P01') ? [] : (conversationHistory || []);
+    // 테이블이 없으면 명확한 에러 메시지 반환
+    if (historyError && historyError.code === '42P01') {
+      return NextResponse.json({
+        error: 'Yukino database tables not created',
+        message: '유키노 AI 비서를 사용하려면 Supabase에서 데이터베이스 테이블을 먼저 생성해야 합니다.',
+        guide: 'docs/YUKINO_SETUP.md 파일을 참고하여 SQL을 실행하세요.',
+        sqlFile: 'supabase/migrations/20250127_create_yukino_conversations.sql',
+      }, { status: 503 });
+    }
+
+    if (historyError) throw historyError;
 
     // 유키노의 장기 기억 로드
     const { data: memories, error: memoryError } = await supabase
@@ -297,8 +300,16 @@ export async function POST(request: NextRequest) {
       .order('importance', { ascending: false })
       .limit(10);
 
-    // 테이블이 없으면 빈 배열 사용
-    const longTermMemories = (memoryError && memoryError.code === '42P01') ? [] : (memories || []);
+    if (memoryError && memoryError.code === '42P01') {
+      return NextResponse.json({
+        error: 'Yukino database tables not created',
+        message: '유키노 AI 비서를 사용하려면 Supabase에서 데이터베이스 테이블을 먼저 생성해야 합니다.',
+        guide: 'docs/YUKINO_SETUP.md 파일을 참고하여 SQL을 실행하세요.',
+        sqlFile: 'supabase/migrations/20250127_create_yukino_conversations.sql',
+      }, { status: 503 });
+    }
+
+    if (memoryError) throw memoryError;
 
     // 현재 데이터 수집
     const today = new Date().toISOString().split('T')[0];
@@ -326,7 +337,7 @@ export async function POST(request: NextRequest) {
       finance: financeResult.data || [],
       reflections: reflectionResult.data || [],
       latestStats: statsResult.data?.[0] || null,
-      memories: longTermMemories,
+      memories: memories || [],
     };
 
     // 메시지 구성
@@ -351,8 +362,8 @@ ${context.memories.map(m => `- [${m.memory_type}] ${m.content} (중요도: ${m.i
     ];
 
     // 대화 내역 추가
-    if (conversations && conversations.length > 0) {
-      conversations.forEach(msg => {
+    if (conversationHistory && conversationHistory.length > 0) {
+      conversationHistory.forEach(msg => {
         if (msg.role !== 'system') {
           messages.push({
             role: msg.role === 'yukino' ? 'assistant' : 'user',
@@ -410,28 +421,29 @@ ${context.memories.map(m => `- [${m.memory_type}] ${m.content} (중요도: ${m.i
 
     finalResponse = completion.choices[0]?.message?.content || '응답을 생성할 수 없습니다.';
 
-    // 사용자 메시지 저장 (테이블 있을 때만)
-    try {
-      await supabase.from('yukino_conversations').insert({
-        user_id: userId,
-        role: 'user',
-        content: message,
-      });
+    // 사용자 메시지 저장
+    const { error: userSaveError } = await supabase.from('yukino_conversations').insert({
+      user_id: userId,
+      role: 'user',
+      content: message,
+    });
 
-      // 유키노 응답 저장
-      await supabase.from('yukino_conversations').insert({
-        user_id: userId,
-        role: 'yukino',
-        content: finalResponse,
-        metadata: { functionCalls: functionResults },
-      });
-    } catch (saveError: any) {
-      // 테이블이 없으면 저장 스킵 (마이그레이션 전)
-      if (saveError.code === '42P01') {
-        console.log('[Yukino] Conversation saving skipped - table does not exist yet.');
-      } else {
-        console.error('[Yukino] Failed to save conversation:', saveError);
-      }
+    if (userSaveError) {
+      console.error('[Yukino] Failed to save user message:', userSaveError);
+      throw new Error('대화 저장 실패. Supabase 테이블 설정을 확인하세요.');
+    }
+
+    // 유키노 응답 저장
+    const { error: yukinoSaveError } = await supabase.from('yukino_conversations').insert({
+      user_id: userId,
+      role: 'yukino',
+      content: finalResponse,
+      metadata: { functionCalls: functionResults },
+    });
+
+    if (yukinoSaveError) {
+      console.error('[Yukino] Failed to save yukino response:', yukinoSaveError);
+      throw new Error('대화 저장 실패. Supabase 테이블 설정을 확인하세요.');
     }
 
     return NextResponse.json({
@@ -464,10 +476,14 @@ export async function GET(request: NextRequest) {
       .eq('user_id', userId)
       .order('created_at', { ascending: true });
 
-    // 테이블이 없으면 빈 배열 반환 (마이그레이션 전)
+    // 테이블이 없으면 명확한 에러 메시지 반환
     if (error && error.code === '42P01') {
-      console.log('[Yukino] yukino_conversations table does not exist yet. Please run migration.');
-      return NextResponse.json({ success: true, conversations: [] });
+      return NextResponse.json({
+        error: 'Yukino database tables not created',
+        message: '유키노 AI 비서를 사용하려면 Supabase에서 데이터베이스 테이블을 먼저 생성해야 합니다.',
+        guide: 'docs/YUKINO_SETUP.md 파일을 참고하여 SQL을 실행하세요.',
+        sqlFile: 'supabase/migrations/20250127_create_yukino_conversations.sql',
+      }, { status: 503 });
     }
 
     if (error) throw error;

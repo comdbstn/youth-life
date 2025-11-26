@@ -40,9 +40,34 @@ export default function YukinoPage() {
       const userId = getCurrentUserId();
       const response = await fetch(`/api/yukino/chat-v2?userId=${userId}`);
 
-      if (!response.ok) throw new Error('Failed to load conversations');
-
       const data = await response.json();
+
+      // 데이터베이스 테이블이 없는 경우
+      if (response.status === 503 && data.error === 'Yukino database tables not created') {
+        setMessages([{
+          role: 'yukino',
+          content: `⚠️ **데이터베이스 설정 필요**
+
+안녕하세요, 윤수님. 유키노예요.
+
+저와 대화하려면 먼저 Supabase에서 데이터베이스 테이블을 생성해야 해요.
+
+**설정 방법:**
+1. GitHub 저장소의 \`docs/YUKINO_SETUP.md\` 파일 확인
+2. Supabase SQL Editor에서 마이그레이션 SQL 실행
+3. 페이지 새로고침
+
+SQL 파일 위치: \`${data.sqlFile}\`
+
+설정이 완료되면 저와 대화하실 수 있어요. 기다리고 있을게요. 💕`,
+          timestamp: new Date().toISOString(),
+        }]);
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to load conversations');
+      }
 
       if (data.conversations && data.conversations.length > 0) {
         const loadedMessages: Message[] = data.conversations.map((conv: any) => ({
@@ -62,10 +87,14 @@ export default function YukinoPage() {
       }
     } catch (err: any) {
       console.error('Failed to load conversations:', err);
-      // 에러 시에도 인사말 표시
+      // 에러 시 에러 메시지 표시
       setMessages([{
         role: 'yukino',
-        content: YUKINO_GREETING,
+        content: `❌ **오류 발생**
+
+${err.message}
+
+GitHub 저장소의 \`docs/YUKINO_SETUP.md\` 파일을 확인해주세요.`,
         timestamp: new Date().toISOString(),
       }]);
     } finally {
@@ -104,6 +133,30 @@ export default function YukinoPage() {
 
       const data = await response.json();
 
+      // 데이터베이스 테이블이 없는 경우
+      if (response.status === 503 && data.error === 'Yukino database tables not created') {
+        const errorMessage: Message = {
+          role: 'yukino',
+          content: `⚠️ **데이터베이스 설정 필요**
+
+${data.message}
+
+**설정 방법:**
+1. GitHub 저장소의 \`docs/YUKINO_SETUP.md\` 파일 확인
+2. Supabase SQL Editor에서 마이그레이션 SQL 실행
+3. 페이지 새로고침
+
+SQL 파일 위치: \`${data.sqlFile}\``,
+          timestamp: new Date().toISOString(),
+        };
+        setMessages(prev => [...prev, errorMessage]);
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error(data.message || data.error || 'Failed to get response from Yukino');
+      }
+
       const yukinoMessage: Message = {
         role: 'yukino',
         content: data.message,
@@ -121,7 +174,12 @@ export default function YukinoPage() {
       console.error('Failed to chat with Yukino:', err);
       const errorMessage: Message = {
         role: 'yukino',
-        content: '죄송합니다. 일시적인 오류가 발생했습니다. 잠시 후 다시 시도해주세요.',
+        content: `❌ **오류 발생**
+
+${err.message}
+
+Supabase 데이터베이스 설정을 확인해주세요.
+자세한 내용: \`docs/YUKINO_SETUP.md\``,
         timestamp: new Date().toISOString(),
       };
       setMessages(prev => [...prev, errorMessage]);
