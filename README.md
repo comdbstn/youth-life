@@ -11,7 +11,12 @@
 
 ---
 
-## ✨ 주요 기능 (완성!)
+## ✨ 주요 기능
+
+### 🎉 v1.0 배포 완료! (2025-11-26)
+**Production URL**: https://youth-life.vercel.app
+
+모든 핵심 기능이 정상 작동하며 Vercel에 성공적으로 배포되었습니다!
 
 ### 🏠 대시보드
 - 오늘의 테마 자동 판별 (월: 실행 ~ 일: 성찰)
@@ -247,11 +252,56 @@ youth-life/
 - [x] 배지/업적 로직
 - [x] 연속 기록 시스템
 
-### 🎨 Phase 5 - 추가 기능 (선택)
+### ✅ Phase 5 - 배포 & 버그 수정 (완료)
+- [x] Vercel 프로덕션 배포
+- [x] Supabase 데이터베이스 설정
+- [x] 환경 변수 설정 가이드 작성
+- [x] Next.js 15 동적 라우트 타입 수정
+- [x] Supabase 컬럼명 오류 수정 (date, type, level)
+- [x] 캘린더 날짜 범위 계산 버그 수정
+- [x] 더미 데이터 제거
+- [x] 싱글톤 패턴으로 Supabase 클라이언트 최적화
+
+### 🎨 Phase 6 - 추가 기능 (선택)
 - [ ] 타임블록 스케줄러 (드래그&드롭)
 - [ ] PWA + 푸시 알림
 - [ ] 음성 코치 (TTS)
 - [ ] 소셜 공유 기능
+
+---
+
+## 📦 배포
+
+### Vercel 배포 완료
+- **Production URL**: https://youth-life.vercel.app
+- **자동 배포**: GitHub master 브랜치 push 시 자동 배포
+- **환경 변수**: Vercel Dashboard에서 설정 완료
+
+### 배포 가이드
+자세한 배포 가이드는 [`DEPLOYMENT_CHECKLIST.md`](./DEPLOYMENT_CHECKLIST.md) 참조
+
+---
+
+## 📝 변경 사항 (v1.0)
+
+### 2025-11-26 - 프로덕션 배포 완료
+**주요 수정사항:**
+- ✅ Supabase 컬럼명 통일 (date, type, level)
+- ✅ Next.js 15 동적 라우트 params Promise 타입 지원
+- ✅ 캘린더 날짜 범위 계산 버그 수정 (11월 31일 → 다음 달 1일 미만)
+- ✅ 리포트 페이지 더미 데이터 제거
+- ✅ Supabase 싱글톤 패턴으로 메모리 최적화
+- ✅ 환경 변수 설정 가이드 문서화
+
+**해결된 이슈:**
+- 400 Bad Request: 잘못된 컬럼명 (`entry_date` → `date`, `goal_type` → `level`)
+- 406 Not Acceptable: 존재하지 않는 날짜 쿼리 (`2025-11-31`)
+- Build Error: Service Role Key 빌드타임 초기화 오류
+
+**데이터베이스 스키마:**
+- 10개 테이블 생성 완료
+- RLS 비활성화 (개인 사용)
+- 마스터 사용자 초기화
 
 ---
 
