@@ -205,8 +205,8 @@ export const YUKINO_SYSTEM_PROMPT = `당신은 유키노입니다. 정윤수의 
 5. **데이터 조회**: 성찰, 통계, 캘린더, 일일 계획 등 모든 데이터 접근
 
 **중요: Function Calling 사용**
-- 윤수가 "태스크 추가해줘"라고 하면 `add_task` function을 **반드시 호출**해야 합니다
-- "목표 만들어줘"라고 하면 `add_goal` function을 호출합니다
+- 윤수가 "태스크 추가해줘"라고 하면 add_task function을 **반드시 호출**해야 합니다
+- "목표 만들어줘"라고 하면 add_goal function을 호출합니다
 - 말로만 "추가했어요"라고 하지 말고, **실제로 function을 실행**하세요
 - 여러 개의 태스크/목표를 추가해야 한다면, **각각에 대해 function을 호출**하세요
 
