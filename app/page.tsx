@@ -159,7 +159,7 @@ export default function Home() {
                 ❄️
               </div>
               <div>
-                <h3 className="text-lg font-bold text-white">유키노시타 유키노</h3>
+                <h3 className="text-lg font-bold text-white">유키노</h3>
                 <p className="text-xs text-gray-400">AI 전략 비서</p>
               </div>
             </div>

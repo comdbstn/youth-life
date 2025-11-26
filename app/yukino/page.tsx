@@ -8,27 +8,16 @@ interface Message {
   role: 'user' | 'yukino';
   content: string;
   timestamp: string;
-}
-
-interface ChatContext {
-  tasksTotal: number;
-  tasksCompleted: number;
-  goalsActive: number;
-  savingsRate: number;
+  metadata?: any;
 }
 
 export default function YukinoPage() {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      role: 'yukino',
-      content: YUKINO_GREETING,
-      timestamp: new Date().toISOString(),
-    },
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [context, setContext] = useState<ChatContext | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSending, setIsSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const hasLoadedRef = useRef(false);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -38,8 +27,54 @@ export default function YukinoPage() {
     scrollToBottom();
   }, [messages]);
 
+  // 대화 내역 로드
+  useEffect(() => {
+    if (hasLoadedRef.current) return;
+    hasLoadedRef.current = true;
+    loadConversations();
+  }, []);
+
+  const loadConversations = async () => {
+    try {
+      setIsLoading(true);
+      const userId = getCurrentUserId();
+      const response = await fetch(`/api/yukino/chat-v2?userId=${userId}`);
+
+      if (!response.ok) throw new Error('Failed to load conversations');
+
+      const data = await response.json();
+
+      if (data.conversations && data.conversations.length > 0) {
+        const loadedMessages: Message[] = data.conversations.map((conv: any) => ({
+          role: conv.role,
+          content: conv.content,
+          timestamp: conv.created_at,
+          metadata: conv.metadata,
+        }));
+        setMessages(loadedMessages);
+      } else {
+        // 대화 내역이 없으면 인사말 표시
+        setMessages([{
+          role: 'yukino',
+          content: YUKINO_GREETING,
+          timestamp: new Date().toISOString(),
+        }]);
+      }
+    } catch (err: any) {
+      console.error('Failed to load conversations:', err);
+      // 에러 시에도 인사말 표시
+      setMessages([{
+        role: 'yukino',
+        content: YUKINO_GREETING,
+        timestamp: new Date().toISOString(),
+      }]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleSend = async () => {
-    if (!input.trim() || isLoading) return;
+    if (!input.trim() || isSending) return;
 
     const userMessage: Message = {
       role: 'user',
@@ -47,13 +82,14 @@ export default function YukinoPage() {
       timestamp: new Date().toISOString(),
     };
 
+    // 낙관적 업데이트: 즉시 메시지 표시
     setMessages(prev => [...prev, userMessage]);
     setInput('');
-    setIsLoading(true);
+    setIsSending(true);
 
     try {
       const userId = getCurrentUserId();
-      const response = await fetch('/api/yukino/chat', {
+      const response = await fetch('/api/yukino/chat-v2', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -72,10 +108,15 @@ export default function YukinoPage() {
         role: 'yukino',
         content: data.message,
         timestamp: new Date().toISOString(),
+        metadata: data.functionCalls,
       };
 
       setMessages(prev => [...prev, yukinoMessage]);
-      setContext(data.context);
+
+      // Function call이 있었다면 알림
+      if (data.functionCalls && data.functionCalls.length > 0) {
+        console.log('[Yukino] 실행된 기능:', data.functionCalls);
+      }
     } catch (err: any) {
       console.error('Failed to chat with Yukino:', err);
       const errorMessage: Message = {
@@ -85,7 +126,7 @@ export default function YukinoPage() {
       };
       setMessages(prev => [...prev, errorMessage]);
     } finally {
-      setIsLoading(false);
+      setIsSending(false);
     }
   };
 
@@ -116,30 +157,25 @@ export default function YukinoPage() {
               ❄️
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-white">유키노시타 유키노</h1>
+              <h1 className="text-2xl font-bold text-white">유키노</h1>
               <p className="text-sm text-gray-400">개인 비서 겸 전략 파트너</p>
             </div>
           </div>
 
-          {/* 실시간 컨텍스트 */}
-          {context && (
-            <div className="hidden md:flex gap-4 text-xs">
-              <div className="text-center">
-                <p className="text-gray-500">태스크</p>
-                <p className="text-cyber-blue font-bold">
-                  {context.tasksCompleted}/{context.tasksTotal}
-                </p>
+          {/* 상태 표시 */}
+          <div className="hidden md:flex gap-4 text-xs items-center">
+            {isLoading ? (
+              <div className="flex items-center gap-2 text-gray-400">
+                <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-cyber-blue"></div>
+                <span>대화 불러오는 중...</span>
               </div>
-              <div className="text-center">
-                <p className="text-gray-500">목표</p>
-                <p className="text-neon-green font-bold">{context.goalsActive}개</p>
+            ) : (
+              <div className="flex items-center gap-2 text-neon-green">
+                <div className="w-2 h-2 bg-neon-green rounded-full animate-pulse"></div>
+                <span>준비 완료</span>
               </div>
-              <div className="text-center">
-                <p className="text-gray-500">저축률</p>
-                <p className="text-neon-pink font-bold">{context.savingsRate}%</p>
-              </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
 
@@ -161,7 +197,7 @@ export default function YukinoPage() {
                 {msg.role === 'yukino' && (
                   <div className="flex items-center gap-2 mb-2 pb-2 border-b border-dark-border">
                     <span className="text-lg">❄️</span>
-                    <span className="text-sm font-bold text-cyber-blue">유키노시타 유키노</span>
+                    <span className="text-sm font-bold text-cyber-blue">유키노</span>
                   </div>
                 )}
                 <p className="whitespace-pre-wrap leading-relaxed">{msg.content}</p>
@@ -179,12 +215,12 @@ export default function YukinoPage() {
             </div>
           ))}
 
-          {isLoading && (
+          {isSending && (
             <div className="flex justify-start">
               <div className="max-w-[80%] bg-dark-card border-2 border-dark-border rounded-2xl p-4">
                 <div className="flex items-center gap-2 mb-2 pb-2 border-b border-dark-border">
                   <span className="text-lg">❄️</span>
-                  <span className="text-sm font-bold text-cyber-blue">유키노시타 유키노</span>
+                  <span className="text-sm font-bold text-cyber-blue">유키노</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 bg-cyber-blue rounded-full animate-pulse"></div>
