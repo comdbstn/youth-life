@@ -132,8 +132,19 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 
 1. [Supabase](https://supabase.com/) 에서 새 프로젝트 생성
 2. SQL Editor에서 `supabase/schema.sql` 실행
-3. Settings > API에서 URL과 anon key 복사
-4. `.env.local`에 붙여넣기
+3. **유키노 AI 대화 기능 활성화** (선택):
+   ```sql
+   -- supabase/migrations/20250127_create_yukino_conversations.sql 실행
+   ```
+   이 마이그레이션을 실행하면:
+   - 대화 내역이 영구 저장됩니다
+   - 페이지 새로고침해도 대화가 유지됩니다
+   - 유키노의 장기 기억 시스템이 활성화됩니다
+
+   **실행하지 않아도** 유키노 채팅은 작동하지만, 대화 내역이 저장되지 않습니다.
+
+4. Settings > API에서 URL과 anon key 복사
+5. `.env.local`에 붙여넣기
 
 ---
 
