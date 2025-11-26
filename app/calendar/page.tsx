@@ -38,7 +38,7 @@ export default function CalendarPage() {
         .select('*')
         .eq('user_id', userId)
         .gte('date', `${year}-${String(month + 1).padStart(2, '0')}-01`)
-        .lte('date', `${year}-${String(month + 1).padStart(2, '0')}-31`)
+        .lt('date', `${year}-${String(month + 2).padStart(2, '0')}-01`)
         .order('date', { ascending: true })
         .order('start_time', { ascending: true });
 

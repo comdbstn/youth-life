@@ -70,7 +70,7 @@ export const ACHIEVEMENTS: Omit<Achievement, 'unlocked' | 'unlockedAt'>[] = [
         .select('id')
         .eq('user_id', userId)
         .eq('is_emotional', true)
-        .gte('entry_date', monthAgoStr);
+        .gte('date', monthAgoStr);
 
       return (entries?.length || 0) === 0;
     },

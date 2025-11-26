@@ -34,8 +34,8 @@ export default function FinancePage() {
         .from('finance_entries')
         .select('*')
         .eq('user_id', userId)
-        .gte('entry_date', today)
-        .order('entry_date', { ascending: false });
+        .gte('date', today)
+        .order('date', { ascending: false });
 
       if (todayError) throw todayError;
 
@@ -46,18 +46,18 @@ export default function FinancePage() {
         .from('finance_entries')
         .select('*')
         .eq('user_id', userId)
-        .gte('entry_date', weekAgo);
+        .gte('date', weekAgo);
 
       if (weekError) throw weekError;
 
       const stats = (weekData || []).reduce(
         (acc, entry) => {
-          if (entry.entry_type === 'income') {
-            acc.income += entry.amount;
+          if (entry.type === 'income') {
+            acc.income += Number(entry.amount);
           } else {
-            acc.expense += entry.amount;
+            acc.expense += Number(entry.amount);
             if (entry.is_emotional) {
-              acc.emotionalExpense += entry.amount;
+              acc.emotionalExpense += Number(entry.amount);
             }
           }
           return acc;
@@ -88,12 +88,13 @@ export default function FinancePage() {
       const userId = getCurrentUserId();
       const newEntry: Partial<FinanceEntry> = {
         user_id: userId,
-        entry_type: entryType,
+        type: entryType,
         amount: parseFloat(amount),
         category,
-        description,
+        note: description,
         is_emotional: category === 'emotional',
-        entry_date: new Date().toISOString(),
+        date: new Date().toISOString().split('T')[0],
+        tag: category === 'emotional' ? 'emotional' : 'variable',
       };
 
       const { data, error } = await supabase

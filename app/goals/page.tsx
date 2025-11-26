@@ -27,7 +27,7 @@ export default function GoalsPage() {
         .from('goals')
         .select('*')
         .eq('user_id', userId)
-        .eq('goal_type', activeTab)
+        .eq('level', activeTab.toUpperCase())
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -48,13 +48,31 @@ export default function GoalsPage() {
     const userId = getCurrentUserId();
 
     try {
+      // 기간 계산
+      const now = new Date();
+      let periodStart = new Date(now.getFullYear(), now.getMonth(), 1);
+      let periodEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+      if (activeTab === 'weekly') {
+        const dayOfWeek = now.getDay();
+        periodStart = new Date(now);
+        periodStart.setDate(now.getDate() - dayOfWeek);
+        periodEnd = new Date(periodStart);
+        periodEnd.setDate(periodStart.getDate() + 6);
+      } else if (activeTab === 'daily') {
+        periodStart = now;
+        periodEnd = now;
+      }
+
       const newGoal: Partial<Goal> = {
         user_id: userId,
         title,
         description: description || undefined,
-        goal_type: activeTab,
-        status: 'in_progress',
+        level: activeTab.toUpperCase() as 'MONTHLY' | 'WEEKLY' | 'DAILY',
+        status: 'active',
         progress: 0,
+        period_start: periodStart.toISOString().split('T')[0],
+        period_end: periodEnd.toISOString().split('T')[0],
       };
 
       const { data, error } = await supabase
