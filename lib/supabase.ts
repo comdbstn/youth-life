@@ -38,9 +38,22 @@ export const getSupabaseAdmin = () => {
   return supabaseAdminInstance;
 };
 
-// 하위 호환성을 위한 export
-export const supabase = getSupabase();
-export const supabaseAdmin = getSupabaseAdmin();
+// 기본 export - getSupabase()만 사용 (lazy initialization)
+export const supabase = (() => {
+  let instance: SupabaseClient | null = null;
+  return new Proxy({} as SupabaseClient, {
+    get(target, prop) {
+      if (!instance) {
+        instance = getSupabase();
+      }
+      return (instance as any)[prop];
+    }
+  });
+})();
+
+// supabaseAdmin은 실제 사용할 때만 호출하도록 함수로만 제공
+// export const supabaseAdmin = getSupabaseAdmin(); // 제거
+// 대신 getSupabaseAdmin() 함수를 직접 호출하여 사용
 
 // Supabase가 설정되어 있는지 확인
 export const isSupabaseConfigured = () => {
