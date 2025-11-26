@@ -11,15 +11,18 @@ const openai = new OpenAI({
 const functions = [
   {
     name: 'add_task',
-    description: '새로운 태스크를 추가합니다',
+    description: '새로운 태스크를 추가합니다. planned_at은 반드시 오늘 날짜의 ISO 8601 형식이어야 합니다.',
     parameters: {
       type: 'object',
       properties: {
         title: { type: 'string', description: '태스크 제목' },
         description: { type: 'string', description: '태스크 설명' },
-        planned_at: { type: 'string', description: 'ISO 8601 형식 날짜시간' },
+        planned_at: {
+          type: 'string',
+          description: 'ISO 8601 형식 날짜시간. 반드시 오늘 날짜로 시작해야 함. 예: "2025-11-27T14:00:00.000Z"'
+        },
         duration_min: { type: 'number', description: '예상 소요시간(분)' },
-        priority: { type: 'number', enum: [1, 2, 3], description: '우선순위' },
+        priority: { type: 'number', enum: [1, 2, 3], description: '우선순위 (1=높음, 2=중간, 3=낮음)' },
         tags: { type: 'array', items: { type: 'string' }, description: '태그 목록' },
       },
       required: ['title', 'planned_at', 'duration_min', 'priority'],
@@ -130,13 +133,33 @@ const functions = [
 async function executeFunction(functionName: string, args: any, userId: string) {
   switch (functionName) {
     case 'add_task': {
+      // planned_at 검증 및 보정
+      let plannedAt = args.planned_at;
+      const today = new Date().toISOString().split('T')[0];
+
+      // planned_at이 오늘 날짜가 아니면 강제로 오늘로 변경
+      if (!plannedAt.startsWith(today)) {
+        console.warn(`[Yukino] GPT provided wrong date: ${plannedAt}, correcting to today: ${today}`);
+        // 시간 부분만 추출하거나, 없으면 현재 시각 사용
+        const timePart = plannedAt.includes('T')
+          ? plannedAt.split('T')[1]
+          : new Date().toISOString().split('T')[1];
+        plannedAt = `${today}T${timePart}`;
+      }
+
+      // 시간 부분이 없으면 현재 시각 사용
+      if (!plannedAt.includes('T')) {
+        console.warn(`[Yukino] GPT provided date without time: ${plannedAt}, adding current time`);
+        plannedAt = `${plannedAt}T${new Date().toISOString().split('T')[1]}`;
+      }
+
       const { data, error } = await supabase
         .from('tasks')
         .insert({
           user_id: userId,
           title: args.title,
           description: args.description || null,
-          planned_at: args.planned_at,
+          planned_at: plannedAt,
           duration_min: args.duration_min,
           priority: args.priority,
           tags: args.tags || [],

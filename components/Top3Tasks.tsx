@@ -392,6 +392,12 @@ export default function Top3Tasks() {
       const startOfNextDay = new Date(new Date(today).getTime() + 24 * 60 * 60 * 1000)
         .toISOString().split('T')[0] + 'T00:00:00.000Z';
 
+      console.log('[Top3Tasks] Loading tasks for date range:', {
+        today,
+        startOfDay,
+        startOfNextDay,
+      });
+
       const { data, error } = await supabase
         .from('tasks')
         .select('*')
@@ -401,6 +407,11 @@ export default function Top3Tasks() {
         .order('planned_at', { ascending: true });
 
       if (error) throw error;
+
+      console.log('[Top3Tasks] Loaded tasks:', data?.length || 0, 'tasks', data?.map(t => ({
+        title: t.title,
+        planned_at: t.planned_at,
+      })));
 
       setTasks(data || []);
       setError(null);
