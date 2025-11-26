@@ -47,18 +47,19 @@ export interface Task {
 export interface Goal {
   id: string;
   user_id: string;
-  goal_type: 'monthly' | 'weekly' | 'daily';
+  level: 'MONTHLY' | 'WEEKLY' | 'DAILY';
   title: string;
   description?: string;
-  start_date?: string;
-  end_date?: string;
+  period_start: string;
+  period_end: string;
   progress: number;
-  status: 'pending' | 'in_progress' | 'completed' | 'archived';
+  status: 'active' | 'completed' | 'archived';
   created_at?: string;
-  // camelCase aliases
+  updated_at?: string;
+  // camelCase aliases (backward compatibility)
   userId?: string;
-  startDate?: string;
-  endDate?: string;
+  periodStart?: string;
+  periodEnd?: string;
 }
 
 // 타임블록 (DB snake_case)
@@ -130,17 +131,17 @@ export interface Reflection {
 export interface FinanceEntry {
   id: string;
   user_id: string;
-  entry_date: string;
-  entry_type: 'income' | 'expense';
+  date: string;
+  type: 'income' | 'expense';
   amount: number;
   category: string;
+  tag: 'fixed' | 'variable' | 'emotional';
   is_emotional: boolean;
-  description?: string;
+  note?: string;
   created_at?: string;
-  // camelCase aliases
+  updated_at?: string;
+  // camelCase aliases (backward compatibility)
   userId?: string;
-  entryDate?: string;
-  entryType?: string;
   isEmotional?: boolean;
 }
 
