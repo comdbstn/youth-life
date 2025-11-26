@@ -383,6 +383,14 @@ export default function Top3Tasks() {
 
   useEffect(() => {
     loadTasks();
+
+    // 페이지가 다시 포커스될 때 자동 새로고침
+    const handleFocus = () => {
+      loadTasks();
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
   }, []);
 
   const loadTasks = async () => {
