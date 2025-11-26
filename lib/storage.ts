@@ -153,7 +153,7 @@ export function getGoals(userId: string, level?: 'MONTHLY' | 'WEEKLY' | 'DAILY')
   let filtered = allGoals.filter(g => (g.user_id || g.userId) === userId);
 
   if (level) {
-    filtered = filtered.filter(g => (g.goal_type as any) === level);
+    filtered = filtered.filter(g => g.level === level);
   }
 
   return filtered;
@@ -208,16 +208,13 @@ export function getFinanceEntries(userId: string, startDate?: string, endDate?: 
   let filtered = allEntries.filter(e => (e.user_id || e.userId) === userId);
 
   if (startDate) {
-    const entryDate = (e: FinanceEntry) => e.entry_date || e.entryDate || '';
-    filtered = filtered.filter(e => entryDate(e) >= startDate);
+    filtered = filtered.filter(e => e.date >= startDate);
   }
   if (endDate) {
-    const entryDate = (e: FinanceEntry) => e.entry_date || e.entryDate || '';
-    filtered = filtered.filter(e => entryDate(e) <= endDate);
+    filtered = filtered.filter(e => e.date <= endDate);
   }
 
-  const getDate = (e: FinanceEntry) => e.entry_date || e.entryDate || '';
-  return filtered.sort((a, b) => getDate(b).localeCompare(getDate(a)));
+  return filtered.sort((a, b) => b.date.localeCompare(a.date));
 }
 
 export function saveFinanceEntry(entry: FinanceEntry) {

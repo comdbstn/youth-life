@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
     const result = await breakdownGoal({
       goalTitle: goal.title,
       goalDescription: goal.description || undefined,
-      goalType: goal.goal_type,
+      goalType: goal.level,
       availableThemes,
     });
 
