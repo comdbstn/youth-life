@@ -152,6 +152,28 @@ export default function Home() {
         <div className="space-y-6">
           <StatsOverview />
 
+          {/* 유키노 AI 비서 */}
+          <div className="card-game border-2 border-gradient-to-r from-cyber-blue to-neon-pink">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-cyber-blue to-neon-pink flex items-center justify-center text-2xl">
+                ❄️
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-white">유키노시타 유키노</h3>
+                <p className="text-xs text-gray-400">AI 전략 비서</p>
+              </div>
+            </div>
+            <p className="text-sm text-gray-400 mb-4">
+              모든 데이터를 분석하고, 전략을 제안하며, 당신의 성장을 돕는 AI 비서입니다.
+            </p>
+            <a
+              href="/yukino"
+              className="block w-full py-3 bg-gradient-to-r from-cyber-blue to-neon-pink text-white rounded-lg hover:opacity-80 transition-opacity font-bold text-center"
+            >
+              💬 유키노와 대화하기
+            </a>
+          </div>
+
           {/* 빠른 액션 */}
           <div className="card-game">
             <h3 className="text-lg font-bold text-neon-green mb-4">⚡ 빠른 액션</h3>

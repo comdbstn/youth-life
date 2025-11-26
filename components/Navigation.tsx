@@ -15,6 +15,7 @@ export default function Navigation() {
 
   const navItems = [
     { href: '/', label: '홈', icon: '🏠' },
+    { href: '/yukino', label: '유키노', icon: '❄️', special: true },
     { href: '/goals', label: '목표', icon: '🎯' },
     { href: '/calendar', label: '캘린더', icon: '📅' },
     { href: '/finance', label: '금전', icon: '💰' },
@@ -42,7 +43,11 @@ export default function Navigation() {
                   className={`
                     flex flex-col md:flex-row items-center gap-1 md:gap-2 px-4 py-2 rounded-lg
                     transition-all duration-300
-                    ${isActive
+                    ${item.special
+                      ? isActive
+                        ? 'text-white bg-gradient-to-r from-cyber-blue to-neon-pink shadow-neon'
+                        : 'text-gray-400 hover:text-white bg-gradient-to-r from-cyber-blue/20 to-neon-pink/20 hover:from-cyber-blue/40 hover:to-neon-pink/40'
+                      : isActive
                       ? 'text-cyber-blue bg-cyber-blue/10 shadow-neon'
                       : 'text-gray-400 hover:text-white hover:bg-dark-bg'
                     }
