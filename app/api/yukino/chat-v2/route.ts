@@ -315,6 +315,11 @@ export async function POST(request: NextRequest) {
     const today = new Date().toISOString().split('T')[0];
     const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
+    // 안전한 날짜 범위 (오늘 00:00:00 ~ 내일 00:00:00 미만)
+    const startOfToday = today + 'T00:00:00.000Z';
+    const startOfTomorrow = new Date(new Date(today).getTime() + 24 * 60 * 60 * 1000)
+      .toISOString().split('T')[0] + 'T00:00:00.000Z';
+
     const [
       tasksResult,
       goalsResult,
@@ -322,16 +327,26 @@ export async function POST(request: NextRequest) {
       reflectionResult,
       statsResult,
     ] = await Promise.all([
-      supabase.from('tasks').select('*').eq('user_id', userId).gte('planned_at', today).order('planned_at', { ascending: true }),
+      supabase.from('tasks').select('*').eq('user_id', userId).gte('planned_at', startOfToday).lt('planned_at', startOfTomorrow).order('planned_at', { ascending: true }),
       supabase.from('goals').select('*').eq('user_id', userId).eq('status', 'active'),
       supabase.from('finance_entries').select('*').eq('user_id', userId).gte('date', weekAgo).order('date', { ascending: false }),
-      supabase.from('reflections').select('*').eq('user_id', userId).order('date', { ascending: false }).limit(3),
-      supabase.from('stats').select('*').eq('user_id', userId).order('date', { ascending: false }).limit(1),
+      supabase.from('reflections').select('*').eq('user_id', userId).order('date', { ascending: false}).limit(3),
+      supabase.from('stats').select('*').eq('user_id', userId).order('date', { ascending: false}).limit(1),
     ]);
+
+    // 현재 시각 정보 (한국 시간)
+    const now = new Date();
+    const koreaTime = new Date(now.getTime() + (9 * 60 * 60 * 1000)); // UTC+9
+    const currentTime = koreaTime.toISOString();
+    const currentHour = koreaTime.getHours();
+    const currentMinute = koreaTime.getMinutes();
 
     // 데이터 컨텍스트 구성
     const context = {
       today,
+      currentTime,
+      currentHour,
+      currentMinute,
       tasks: tasksResult.data || [],
       goals: goalsResult.data || [],
       finance: financeResult.data || [],
@@ -345,7 +360,17 @@ export async function POST(request: NextRequest) {
       { role: 'system', content: YUKINO_SYSTEM_PROMPT },
       {
         role: 'system',
-        content: `# 현재 데이터 컨텍스트 (${today})
+        content: `# 현재 시각 및 데이터 컨텍스트
+
+**현재 날짜**: ${today} (오늘)
+**현재 시각**: ${currentHour}시 ${currentMinute}분 (한국 시간 KST)
+**ISO 8601 현재 시각**: ${currentTime}
+
+## 중요: 태스크 추가 시 planned_at 형식
+- 태스크를 추가할 때 planned_at은 **반드시 오늘 날짜(${today})의 ISO 8601 형식**으로 작성하세요
+- 예시: "${today}T17:00:00.000Z" (오후 5시)
+- 예시: "${today}T09:30:00.000Z" (오전 9시 30분)
+- 시간을 지정하지 않으면 태스크가 표시되지 않을 수 있습니다
 
 ## 오늘의 태스크 (${context.tasks.length}개)
 ${context.tasks.map(t => `- [${t.id}] ${t.title} (${t.status}) - ${t.planned_at}`).join('\n') || '없음'}

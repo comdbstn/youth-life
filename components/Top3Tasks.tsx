@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   DndContext,
   closestCenter,
@@ -381,30 +381,23 @@ export default function Top3Tasks() {
     })
   );
 
-  useEffect(() => {
-    loadTasks();
-
-    // 페이지가 다시 포커스될 때 자동 새로고침
-    const handleFocus = () => {
-      loadTasks();
-    };
-
-    window.addEventListener('focus', handleFocus);
-    return () => window.removeEventListener('focus', handleFocus);
-  }, []);
-
-  const loadTasks = async () => {
+  const loadTasks = useCallback(async () => {
     try {
       setIsLoading(true);
       const userId = getCurrentUserId();
       const today = new Date().toISOString().split('T')[0];
 
+      // 날짜 범위: 오늘 00:00:00부터 내일 00:00:00 미만
+      const startOfDay = today + 'T00:00:00.000Z';
+      const startOfNextDay = new Date(new Date(today).getTime() + 24 * 60 * 60 * 1000)
+        .toISOString().split('T')[0] + 'T00:00:00.000Z';
+
       const { data, error } = await supabase
         .from('tasks')
         .select('*')
         .eq('user_id', userId)
-        .gte('planned_at', today)
-        .lte('planned_at', today + 'T23:59:59')
+        .gte('planned_at', startOfDay)
+        .lt('planned_at', startOfNextDay)
         .order('planned_at', { ascending: true });
 
       if (error) throw error;
@@ -417,7 +410,19 @@ export default function Top3Tasks() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadTasks();
+
+    // 페이지가 다시 포커스될 때 자동 새로고침
+    const handleFocus = () => {
+      loadTasks();
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [loadTasks]);
 
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
