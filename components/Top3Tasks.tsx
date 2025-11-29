@@ -385,25 +385,15 @@ export default function Top3Tasks() {
     try {
       setIsLoading(true);
       const userId = getCurrentUserId();
-      const today = new Date().toISOString().split('T')[0];
 
-      // 날짜 범위: 오늘 00:00:00부터 내일 00:00:00 미만
-      const startOfDay = today + 'T00:00:00.000Z';
-      const startOfNextDay = new Date(new Date(today).getTime() + 24 * 60 * 60 * 1000)
-        .toISOString().split('T')[0] + 'T00:00:00.000Z';
+      console.log('[Top3Tasks] Loading all pending/in_progress tasks');
 
-      console.log('[Top3Tasks] Loading tasks for date range:', {
-        today,
-        startOfDay,
-        startOfNextDay,
-      });
-
+      // 모든 미완료 태스크를 가져옴 (날짜 제한 없음)
       const { data, error } = await supabase
         .from('tasks')
         .select('*')
         .eq('user_id', userId)
-        .gte('planned_at', startOfDay)
-        .lt('planned_at', startOfNextDay)
+        .in('status', ['pending', 'in_progress'])
         .order('planned_at', { ascending: true });
 
       if (error) throw error;
@@ -411,6 +401,7 @@ export default function Top3Tasks() {
       console.log('[Top3Tasks] Loaded tasks:', data?.length || 0, 'tasks', data?.map(t => ({
         title: t.title,
         planned_at: t.planned_at,
+        status: t.status,
       })));
 
       setTasks(data || []);
@@ -593,7 +584,7 @@ export default function Top3Tasks() {
     <>
       <div className="card-game">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-cyber-blue">🎯 오늘의 태스크</h2>
+          <h2 className="text-2xl font-bold text-cyber-blue">🎯 해야 할 태스크</h2>
           <button
             onClick={handleAddTask}
             className="px-4 py-2 bg-cyber-blue text-dark-navy rounded-lg hover:opacity-80 transition-opacity font-bold text-sm"
@@ -604,7 +595,7 @@ export default function Top3Tasks() {
 
         {tasks.length === 0 ? (
           <div className="text-center py-12">
-            <p className="text-gray-400 mb-4">오늘의 태스크가 없습니다</p>
+            <p className="text-gray-400 mb-4">해야 할 태스크가 없습니다</p>
             <button
               onClick={handleAddTask}
               className="px-6 py-3 bg-cyber-blue text-dark-navy rounded-lg hover:bg-cyber-blue/80 transition-colors font-bold"
